@@ -309,6 +309,73 @@ tr.comprado td.acciones-col { text-decoration: none; }
 }
 .check-inline input { width: 18px; height: 18px; }
 
+/* ---------- Acciones de lista (guardar en histórico) ---------- */
+.acciones-lista {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+.btn-hist {
+  background: var(--azul);
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-hist:hover { background: var(--azul-osc); }
+
+/* ---------- Histórico ---------- */
+.hist-intro { color: #666; margin: 0 0 16px; font-size: 0.95rem; }
+.hist-lista { display: flex; flex-direction: column; gap: 12px; }
+
+.hist-card {
+  border: 1px solid var(--gris-borde);
+  border-radius: 10px;
+  padding: 14px 16px;
+  background: #fff;
+}
+.hist-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.hist-nombre { font-weight: 700; color: var(--azul-osc); font-size: 1.05rem; }
+.hist-meta { font-size: 0.8rem; color: #888; margin-top: 2px; }
+.hist-total { font-size: 1.2rem; font-weight: 700; color: var(--azul); white-space: nowrap; }
+
+.hist-detalle { display: none; margin-top: 12px; overflow-x: auto; }
+.hist-card.abierto .hist-detalle { display: block; }
+.hist-tabla { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.hist-tabla th, .hist-tabla td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--gris-borde);
+  text-align: left;
+}
+.hist-tabla th { background: var(--gris); font-size: 0.72rem; text-transform: uppercase; color: #777; }
+.hist-tabla td.num, .hist-tabla th.num { text-align: right; }
+
+.hist-acciones {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.btn-mini {
+  border: 1px solid var(--gris-borde);
+  background: var(--gris);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.btn-mini:hover { background: #e7ecf2; }
+.btn-hist-del:hover { background: #fdecea; border-color: #f0c4be; }
+.btn-hist-cargar:hover { background: #e9f7ee; border-color: #bfe6cd; }
+
 /* ---------- Footer ---------- */
 .app-footer {
   max-width: 1000px;

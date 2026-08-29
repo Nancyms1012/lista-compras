@@ -23,6 +23,7 @@
   <nav class="tabs">
     <button type="button" class="tab active" data-tab="actual">Compra actual</button>
     <button type="button" class="tab" data-tab="futuro">Compras a futuro</button>
+    <button type="button" class="tab" data-tab="historico">Histórico</button>
   </nav>
 
   <!-- ==================== TAB 1: COMPRA ACTUAL ==================== -->
@@ -112,6 +113,10 @@
       <div class="totales-row descuento-row"><span>Descuento 10%</span><strong id="descuentoComprado">-₡0,00</strong></div>
       <div class="totales-row grand"><span>Total comprado</span><strong id="totalComprado">₡0,00</strong></div>
     </div>
+
+    <div class="acciones-lista">
+      <button type="button" class="btn-hist" data-tab="actual">📋 Guardar en histórico</button>
+    </div>
   </section>
 
   <!-- ==================== TAB 2: COMPRAS A FUTURO ==================== -->
@@ -179,6 +184,17 @@
       <div class="totales-row comprado-row"><span>Ya comprado</span><strong id="compradoFuturo">₡0,00</strong></div>
       <div class="totales-row grand"><span>Falta por comprar</span><strong id="faltaFuturo">₡0,00</strong></div>
     </div>
+
+    <div class="acciones-lista">
+      <button type="button" class="btn-hist" data-tab="futuro">📋 Guardar en histórico</button>
+    </div>
+  </section>
+
+  <!-- ==================== TAB 3: HISTÓRICO ==================== -->
+  <section id="tab-historico" class="tab-panel">
+    <p class="hist-intro">Aquí quedan guardadas las listas que has archivado. Puedes ver el detalle, volver a cargarlas o eliminarlas.</p>
+    <div id="listaHistorico" class="hist-lista"></div>
+    <p id="vacioHistorico" class="empty">Todavía no has guardado ninguna lista en el histórico.</p>
   </section>
 
   <footer class="app-footer">

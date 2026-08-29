@@ -18,6 +18,8 @@ let estado = {
   actual: [],
   // futuro: {id, desc, lugar, pasillo, cant, precio, moneda, comprado}
   futuro: [],
+  // historico: {id, fecha, nombre, tipo:"actual"|"futuro", items:[...], total, tipoCambio}
+  historico: [],
 };
 
 // Estado de ordenamiento por pestaña (solo visual)
@@ -68,6 +70,7 @@ function cargar() {
     estado = { ...estado, ...data };
     estado.actual = Array.isArray(data.actual) ? data.actual : [];
     estado.futuro = Array.isArray(data.futuro) ? data.futuro : [];
+    estado.historico = Array.isArray(data.historico) ? data.historico : [];
     // Migración: artículos viejos de "actual" sin campo "incluir" se asumen incluidos
     estado.actual.forEach((it) => {
       if (typeof it.incluir === "undefined") it.incluir = true;
@@ -416,6 +419,142 @@ function sincronizarCabecerasFuturo() {
 }
 
 // ================================================================
+//   Histórico
+// ================================================================
+function guardarEnHistorico(tab) {
+  const lista = estado[tab];
+  if (!lista.length) {
+    alert("La lista está vacía, no hay nada que guardar.");
+    return;
+  }
+  const nombreDef =
+    (tab === "actual" ? "Compra" : "Compras a futuro") +
+    " " + new Date().toLocaleDateString("es-CR");
+  const nombre = prompt("Nombre para esta lista en el histórico:", nombreDef);
+  if (nombre === null) return; // canceló
+
+  const total = lista.reduce((s, it) => s + totalLinea(it), 0);
+  estado.historico.unshift({
+    id: uid(),
+    fecha: new Date().toISOString(),
+    nombre: nombre.trim() || nombreDef,
+    tipo: tab,
+    items: JSON.parse(JSON.stringify(lista)), // copia profunda
+    total,
+    tipoCambio: estado.tipoCambio,
+  });
+  guardar(true);
+  render();
+  alert("✓ Lista guardada en el histórico. La lista actual se mantiene igual.");
+}
+
+function eliminarHistorico(id) {
+  const h = estado.historico.find((x) => x.id === id);
+  if (!confirm(`¿Eliminar del histórico "${h ? h.nombre : "esta lista"}"?`)) return;
+  estado.historico = estado.historico.filter((x) => x.id !== id);
+  guardar();
+  renderHistorico();
+}
+
+function cargarDesdeHistorico(id) {
+  const h = estado.historico.find((x) => x.id === id);
+  if (!h) return;
+  const destino = h.tipo === "actual" ? "Compra actual" : "Compras a futuro";
+  if (!confirm(
+    `Esto reemplazará tu lista de "${destino}" con la copia guardada "${h.nombre}".\n` +
+    `¿Continuar? (tu lista actual se perderá si no la has guardado)`
+  )) return;
+
+  estado[h.tipo] = JSON.parse(JSON.stringify(h.items));
+  // Asegura campos por si la copia es vieja
+  if (h.tipo === "actual") {
+    estado.actual.forEach((it) => {
+      if (typeof it.incluir === "undefined") it.incluir = true;
+      if (typeof it.comprado === "undefined") it.comprado = false;
+      if (typeof it.pasillo === "undefined") it.pasillo = "";
+    });
+  } else {
+    estado.futuro.forEach((it) => {
+      if (typeof it.pasillo === "undefined") it.pasillo = "";
+    });
+  }
+  guardar(true);
+  render();
+  // Cambia a la pestaña destino
+  const btn = document.querySelector(`.tab[data-tab="${h.tipo}"]`);
+  if (btn) btn.click();
+}
+
+function renderHistorico() {
+  const cont = $("listaHistorico");
+  cont.innerHTML = "";
+  const lista = estado.historico
+    .slice()
+    .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+  lista.forEach((h) => {
+    const fecha = new Date(h.fecha).toLocaleString("es-CR", {
+      dateStyle: "medium", timeStyle: "short",
+    });
+    const tipoTxt = h.tipo === "actual" ? "Compra actual" : "Compras a futuro";
+    const nItems = h.items.length;
+
+    const card = document.createElement("div");
+    card.className = "hist-card";
+    card.innerHTML = `
+      <div class="hist-head">
+        <div>
+          <div class="hist-nombre">${escapeHtml(h.nombre)}</div>
+          <div class="hist-meta">${escapeHtml(tipoTxt)} · ${nItems} artículo${nItems === 1 ? "" : "s"} · ${escapeHtml(fecha)}</div>
+        </div>
+        <div class="hist-total">${fmtCRC(h.total)}</div>
+      </div>
+      <div class="hist-detalle">
+        <table class="hist-tabla">
+          <thead>
+            <tr>
+              <th>Descripción</th>
+              ${h.tipo === "futuro" ? "<th>Lugar</th>" : ""}
+              <th>Pasillo</th>
+              <th class="num">Cant.</th>
+              <th class="num">Precio</th>
+              <th class="num">Total (₡)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${h.items.map((it) => {
+              const simb = it.moneda === "USD" ? "$" : "₡";
+              return `<tr>
+                <td>${escapeHtml(it.desc)}</td>
+                ${h.tipo === "futuro" ? `<td>${escapeHtml(it.lugar || "—")}</td>` : ""}
+                <td>${escapeHtml(it.pasillo || "—")}</td>
+                <td class="num">${formatNum(it.cant)}</td>
+                <td class="num">${simb}${formatNum(it.precio)}</td>
+                <td class="num">${fmtCRC(totalHistLinea(it, h.tipoCambio))}</td>
+              </tr>`;
+            }).join("")}
+          </tbody>
+        </table>
+      </div>
+      <div class="hist-acciones">
+        <button class="btn-mini btn-hist-toggle">Ver detalle</button>
+        <button class="btn-mini btn-hist-cargar" data-id="${h.id}">↩ Volver a cargar</button>
+        <button class="btn-mini btn-hist-del" data-id="${h.id}">🗑️ Eliminar</button>
+      </div>`;
+    cont.appendChild(card);
+  });
+
+  $("vacioHistorico").style.display = estado.historico.length ? "none" : "block";
+}
+
+// Total de una línea usando el tipo de cambio guardado en esa entrada del histórico
+function totalHistLinea(item, tc) {
+  const p = Number(item.precio) || 0;
+  const enCol = item.moneda === "USD" ? p * (Number(tc) || 0) : p;
+  return enCol * (Number(item.cant) || 0);
+}
+
+// ================================================================
 //   Helpers de formato / seguridad
 // ================================================================
 function formatNum(n) {
@@ -445,6 +584,7 @@ function cap(s) {
 function render() {
   renderActual();
   renderFuturo();
+  renderHistorico();
 }
 
 // ================================================================
@@ -527,10 +667,22 @@ function initEventos() {
     const del = e.target.closest(".btn-del");
     const save = e.target.closest(".btn-save");
     const cancel = e.target.closest(".btn-cancel");
+    const hist = e.target.closest(".btn-hist");
+    const histCargar = e.target.closest(".btn-hist-cargar");
+    const histDel = e.target.closest(".btn-hist-del");
+    const histToggle = e.target.closest(".btn-hist-toggle");
     if (edit) iniciarEdicion(edit.dataset.tab, edit.dataset.id);
     else if (del) eliminarItem(del.dataset.tab, del.dataset.id);
     else if (save) guardarEdicion(save.dataset.tab, save.dataset.id);
     else if (cancel) cancelarEdicion();
+    else if (hist) guardarEnHistorico(hist.dataset.tab);
+    else if (histCargar) cargarDesdeHistorico(histCargar.dataset.id);
+    else if (histDel) eliminarHistorico(histDel.dataset.id);
+    else if (histToggle) {
+      const card = histToggle.closest(".hist-card");
+      card.classList.toggle("abierto");
+      histToggle.textContent = card.classList.contains("abierto") ? "Ocultar detalle" : "Ver detalle";
+    }
   });
 
   // Delegación de cambios: checks

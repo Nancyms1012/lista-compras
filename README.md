@@ -17,15 +17,31 @@ HTML + CSS + JavaScript puro. Todo se guarda en el navegador (`localStorage`).
 - Casilla **✓** para marcar cada artículo cuando ya se compró.
 - Resumen: **Total original**, **Ya comprado** y **Falta por comprar** (se va restando).
 
+### Pestaña 3 — Histórico
+- Botón **📋 Guardar en histórico** en cada lista: guarda una copia con fecha y
+  nombre. La lista activa **no se borra**.
+- Cada entrada muestra nombre, tipo, cantidad de artículos, fecha y total.
+- **Ver detalle** de los artículos, **↩ volver a cargar** una lista vieja
+  (para reciclarla) y **🗑️ eliminar** entradas.
+- El total de cada entrada usa el tipo de cambio guardado en ese momento.
+
 ### Común a ambas pestañas
 - **Dos monedas:** cada artículo puede registrarse en **₡ colones** o **$ dólares**.
   Los precios en dólares se convierten a colones automáticamente.
 - **Tipo de cambio automático:** al abrir la app se consulta el valor del día
   desde una API pública gratuita (`open.er-api.com`). Si no hay conexión, usa el
   último valor guardado y se puede ajustar a mano con el botón ↻.
+- **Campo Pasillo** (opcional) para organizar el recorrido en el súper.
+- **Ordenar por columna:** clic en el encabezado (asc/desc).
+- **Seleccionar todo:** casilla en el encabezado de las columnas de check.
 - Moneda base y todos los totales en **colones (₡)**, formato Costa Rica.
-- Editar (✏️) y eliminar (🗑️) artículos.
+- **Edición en línea:** clic en ✏️ y editas la fila directo; ✅ guarda, ✖️ cancela.
+- Eliminar (🗑️) artículos.
 - **Guardado automático** + botón **Guardar**.
+
+En la pestaña **Compra actual** cada artículo tiene dos checks: **Incluir**
+(lo que sí vas a comprar este mes → total preliminar) y **Comprado** (lo que ya
+está en el carrito → total real). Útil para reciclar la lista del mes anterior.
 
 ## Uso
 
