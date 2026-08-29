@@ -57,6 +57,7 @@
       <table id="tablaActual">
         <thead>
           <tr>
+            <th class="check-col">✓</th>
             <th>Descripción</th>
             <th class="num">Cantidad</th>
             <th class="num">Precio unit.</th>
@@ -70,6 +71,7 @@
     </div>
 
     <div class="totales">
+      <div class="totales-titulo">Toda la lista</div>
       <div class="totales-row"><span>Subtotal</span><strong id="subtotalActual">₡0,00</strong></div>
       <div class="totales-row descuento-row">
         <label class="check-inline">
@@ -79,6 +81,13 @@
         <strong id="descuentoActual">-₡0,00</strong>
       </div>
       <div class="totales-row grand"><span>Total a pagar</span><strong id="totalActual">₡0,00</strong></div>
+
+      <div class="totales-sep"></div>
+
+      <div class="totales-titulo">Solo lo marcado ✓ (en el carrito)</div>
+      <div class="totales-row"><span>Subtotal comprado</span><strong id="subtotalComprado">₡0,00</strong></div>
+      <div class="totales-row descuento-row"><span>Descuento 10%</span><strong id="descuentoComprado">-₡0,00</strong></div>
+      <div class="totales-row grand"><span>Total comprado</span><strong id="totalComprado">₡0,00</strong></div>
     </div>
   </section>
 

@@ -249,6 +249,19 @@ tr.comprado td.acciones-col { text-decoration: none; }
   font-size: 1.25rem;
   color: var(--azul);
 }
+.totales-titulo {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #888;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.totales-sep {
+  height: 1px;
+  background: var(--gris-borde);
+  margin: 14px 0;
+}
 .descuento-row strong { color: var(--rojo); }
 .comprado-row strong { color: var(--verde); }
 .check-inline {

@@ -104,6 +104,7 @@ function agregarActual(e) {
     cant: parseFloat($("a-cant").value) || 0,
     precio: parseFloat($("a-precio").value) || 0,
     moneda: $("a-moneda").value,
+    comprado: false,
   });
   $("formActual").reset();
   $("a-cant").value = 1;
@@ -117,8 +118,12 @@ function renderActual() {
   body.innerHTML = "";
   estado.actual.forEach((item) => {
     const tr = document.createElement("tr");
+    if (item.comprado) tr.classList.add("comprado");
     const simb = item.moneda === "USD" ? "$" : "₡";
     tr.innerHTML = `
+      <td class="check-cell">
+        <input type="checkbox" class="chk-actual" data-id="${item.id}" ${item.comprado ? "checked" : ""} title="Marcar como comprado" />
+      </td>
       <td>${escapeHtml(item.desc)}</td>
       <td class="num">${formatNum(item.cant)}</td>
       <td class="num">${simb}${formatNum(item.precio)}<span class="moneda-tag">${item.moneda}</span></td>
@@ -131,11 +136,21 @@ function renderActual() {
   });
   $("vacioActual").style.display = estado.actual.length ? "none" : "block";
 
+  // Totales de TODA la lista
   const subtotal = estado.actual.reduce((s, it) => s + totalLinea(it), 0);
   const descuento = estado.aplicarDescuento ? subtotal * 0.10 : 0;
   $("subtotalActual").textContent = fmtCRC(subtotal);
   $("descuentoActual").textContent = "-" + fmtCRC(descuento);
   $("totalActual").textContent = fmtCRC(subtotal - descuento);
+
+  // Totales solo de lo MARCADO (ya comprado / en el carrito)
+  const subComprado = estado.actual
+    .filter((it) => it.comprado)
+    .reduce((s, it) => s + totalLinea(it), 0);
+  const descComprado = estado.aplicarDescuento ? subComprado * 0.10 : 0;
+  $("subtotalComprado").textContent = fmtCRC(subComprado);
+  $("descuentoComprado").textContent = "-" + fmtCRC(descComprado);
+  $("totalComprado").textContent = fmtCRC(subComprado - descComprado);
 }
 
 // ================================================================
@@ -311,6 +326,14 @@ function initEventos() {
         item.comprado = e.target.checked;
         guardar();
         renderFuturo();
+      }
+    }
+    if (e.target.classList.contains("chk-actual")) {
+      const item = estado.actual.find((it) => it.id === e.target.dataset.id);
+      if (item) {
+        item.comprado = e.target.checked;
+        guardar();
+        renderActual();
       }
     }
   });
