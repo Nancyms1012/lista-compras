@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es-CR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lista de Compras</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>🛒 Lista de Compras</h1>
+    <div class="rate-box">
+      <label for="tipoCambio">Tipo de cambio (₡ por $1)</label>
+      <div class="rate-input">
+        <span class="rate-symbol">₡</span>
+        <input type="number" id="tipoCambio" min="0" step="0.01" inputmode="decimal" />
+        <button type="button" id="btnRefrescarTC" class="btn-ghost" title="Actualizar tipo de cambio">↻</button>
+      </div>
+      <small id="tcInfo" class="rate-info">Buscando tipo de cambio…</small>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button type="button" class="tab active" data-tab="actual">Compra actual</button>
+    <button type="button" class="tab" data-tab="futuro">Compras a futuro</button>
+  </nav>
+
+  <!-- ==================== TAB 1: COMPRA ACTUAL ==================== -->
+  <section id="tab-actual" class="tab-panel active">
+    <form id="formActual" class="item-form">
+      <div class="field field-desc">
+        <label for="a-desc">Descripción</label>
+        <input type="text" id="a-desc" placeholder="Ej. Arroz 1kg" required />
+      </div>
+      <div class="field field-cant">
+        <label for="a-cant">Cantidad</label>
+        <input type="number" id="a-cant" min="0" step="any" value="1" required />
+      </div>
+      <div class="field field-precio">
+        <label for="a-precio">Precio unitario</label>
+        <input type="number" id="a-precio" min="0" step="any" placeholder="0" required />
+      </div>
+      <div class="field field-moneda">
+        <label for="a-moneda">Moneda</label>
+        <select id="a-moneda">
+          <option value="CRC">₡ Colones</option>
+          <option value="USD">$ Dólares</option>
+        </select>
+      </div>
+      <div class="field field-add">
+        <label>&nbsp;</label>
+        <button type="submit" class="btn-primary" id="a-submit">Agregar</button>
+      </div>
+    </form>
+
+    <div class="table-wrap">
+      <table id="tablaActual">
+        <thead>
+          <tr>
+            <th>Descripción</th>
+            <th class="num">Cantidad</th>
+            <th class="num">Precio unit.</th>
+            <th class="num">Total (₡)</th>
+            <th class="acciones-col">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="bodyActual"></tbody>
+      </table>
+      <p id="vacioActual" class="empty">No hay artículos todavía. Agrega el primero arriba. 👆</p>
+    </div>
+
+    <div class="totales">
+      <div class="totales-row"><span>Subtotal</span><strong id="subtotalActual">₡0,00</strong></div>
+      <div class="totales-row descuento-row">
+        <label class="check-inline">
+          <input type="checkbox" id="aplicarDescuento" checked />
+          Aplicar descuento 10%
+        </label>
+        <strong id="descuentoActual">-₡0,00</strong>
+      </div>
+      <div class="totales-row grand"><span>Total a pagar</span><strong id="totalActual">₡0,00</strong></div>
+    </div>
+  </section>
+
+  <!-- ==================== TAB 2: COMPRAS A FUTURO ==================== -->
+  <section id="tab-futuro" class="tab-panel">
+    <form id="formFuturo" class="item-form">
+      <div class="field field-desc">
+        <label for="f-desc">Descripción</label>
+        <input type="text" id="f-desc" placeholder="Ej. Microondas" required />
+      </div>
+      <div class="field field-lugar">
+        <label for="f-lugar">Lugar</label>
+        <input type="text" id="f-lugar" placeholder="Ej. Walmart" />
+      </div>
+      <div class="field field-cant">
+        <label for="f-cant">Cantidad</label>
+        <input type="number" id="f-cant" min="0" step="any" value="1" required />
+      </div>
+      <div class="field field-precio">
+        <label for="f-precio">Precio unitario</label>
+        <input type="number" id="f-precio" min="0" step="any" placeholder="0" required />
+      </div>
+      <div class="field field-moneda">
+        <label for="f-moneda">Moneda</label>
+        <select id="f-moneda">
+          <option value="CRC">₡ Colones</option>
+          <option value="USD">$ Dólares</option>
+        </select>
+      </div>
+      <div class="field field-add">
+        <label>&nbsp;</label>
+        <button type="submit" class="btn-primary" id="f-submit">Agregar</button>
+      </div>
+    </form>
+
+    <div class="table-wrap">
+      <table id="tablaFuturo">
+        <thead>
+          <tr>
+            <th class="check-col">✓</th>
+            <th>Descripción</th>
+            <th>Lugar</th>
+            <th class="num">Cantidad</th>
+            <th class="num">Precio unit.</th>
+            <th class="num">Total (₡)</th>
+            <th class="acciones-col">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="bodyFuturo"></tbody>
+      </table>
+      <p id="vacioFuturo" class="empty">No hay compras a futuro todavía. Agrega la primera arriba. 👆</p>
+    </div>
+
+    <div class="totales">
+      <div class="totales-row"><span>Total original</span><strong id="totalFuturo">₡0,00</strong></div>
+      <div class="totales-row comprado-row"><span>Ya comprado</span><strong id="compradoFuturo">₡0,00</strong></div>
+      <div class="totales-row grand"><span>Falta por comprar</span><strong id="faltaFuturo">₡0,00</strong></div>
+    </div>
+  </section>
+
+  <footer class="app-footer">
+    <button type="button" id="btnGuardar" class="btn-primary">💾 Guardar</button>
+    <span id="estadoGuardado" class="save-status"></span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

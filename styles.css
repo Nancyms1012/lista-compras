@@ -1,0 +1,280 @@
+:root {
+  --azul: #1e5aa8;
+  --azul-osc: #16437d;
+  --verde: #2e9e5b;
+  --verde-osc: #247a47;
+  --rojo: #c0392b;
+  --gris: #f4f6f9;
+  --gris-borde: #d9e0e8;
+  --texto: #223;
+  --sombra: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--gris);
+  color: var(--texto);
+  line-height: 1.4;
+}
+
+/* ---------- Header ---------- */
+.app-header {
+  background: var(--azul);
+  color: #fff;
+  padding: 16px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: var(--sombra);
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.rate-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.rate-box > label {
+  font-size: 0.72rem;
+  opacity: 0.9;
+}
+
+.rate-input {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #fff;
+  border-radius: 6px;
+  padding: 2px 6px;
+}
+
+.rate-symbol { color: var(--azul); font-weight: 700; }
+
+.rate-input input {
+  border: none;
+  width: 90px;
+  font-size: 1rem;
+  padding: 4px;
+  color: var(--texto);
+}
+.rate-input input:focus { outline: none; }
+
+.btn-ghost {
+  border: none;
+  background: var(--gris);
+  color: var(--azul);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 2px 8px;
+}
+.btn-ghost:hover { background: var(--gris-borde); }
+
+.rate-info {
+  font-size: 0.68rem;
+  opacity: 0.85;
+  min-height: 0.9em;
+}
+
+/* ---------- Tabs ---------- */
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 12px 20px 0;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.tab {
+  flex: 1;
+  border: none;
+  background: #e3e9f0;
+  color: var(--azul-osc);
+  padding: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 10px 10px 0 0;
+  cursor: pointer;
+}
+.tab.active {
+  background: #fff;
+  color: var(--azul);
+  box-shadow: var(--sombra);
+}
+
+/* ---------- Panels ---------- */
+.tab-panel {
+  display: none;
+  max-width: 1000px;
+  margin: 0 auto;
+  background: #fff;
+  padding: 20px;
+  border-radius: 0 0 12px 12px;
+  box-shadow: var(--sombra);
+}
+.tab-panel.active { display: block; }
+
+/* ---------- Form ---------- */
+.item-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--gris-borde);
+  margin-bottom: 16px;
+}
+
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label { font-size: 0.75rem; font-weight: 600; color: #555; }
+.field-desc { flex: 2 1 200px; }
+.field-lugar { flex: 1 1 130px; }
+.field-cant { flex: 0 1 90px; }
+.field-precio { flex: 1 1 120px; }
+.field-moneda { flex: 0 1 120px; }
+.field-add { flex: 0 1 auto; }
+
+.field input,
+.field select {
+  padding: 9px 10px;
+  border: 1px solid var(--gris-borde);
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+.field input:focus,
+.field select:focus {
+  outline: none;
+  border-color: var(--azul);
+}
+
+.btn-primary {
+  background: var(--verde);
+  color: #fff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-primary:hover { background: var(--verde-osc); }
+
+/* ---------- Table ---------- */
+.table-wrap { overflow-x: auto; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+th, td {
+  padding: 10px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--gris-borde);
+}
+th {
+  background: var(--gris);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #666;
+}
+td.num, th.num { text-align: right; }
+.check-col, .acciones-col { text-align: center; width: 1%; white-space: nowrap; }
+td.check-cell { text-align: center; }
+td.check-cell input { width: 20px; height: 20px; cursor: pointer; }
+
+.moneda-tag {
+  display: inline-block;
+  font-size: 0.7rem;
+  color: #777;
+  margin-left: 4px;
+}
+
+tr.comprado td {
+  color: #999;
+  text-decoration: line-through;
+}
+tr.comprado td.check-cell,
+tr.comprado td.acciones-col { text-decoration: none; }
+
+.empty {
+  text-align: center;
+  color: #999;
+  padding: 24px;
+  font-style: italic;
+}
+
+/* ---------- Row action buttons ---------- */
+.btn-icon {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 1.05rem;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+.btn-icon:hover { background: var(--gris); }
+.btn-del:hover { background: #fdecea; }
+
+/* ---------- Totales ---------- */
+.totales {
+  margin-top: 20px;
+  padding: 16px;
+  background: var(--gris);
+  border-radius: 10px;
+}
+.totales-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 1rem;
+}
+.totales-row.grand {
+  border-top: 2px solid var(--gris-borde);
+  margin-top: 6px;
+  padding-top: 12px;
+  font-size: 1.25rem;
+  color: var(--azul);
+}
+.descuento-row strong { color: var(--rojo); }
+.comprado-row strong { color: var(--verde); }
+.check-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.check-inline input { width: 18px; height: 18px; }
+
+/* ---------- Footer ---------- */
+.app-footer {
+  max-width: 1000px;
+  margin: 16px auto 40px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.save-status { color: var(--verde-osc); font-size: 0.9rem; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 640px) {
+  .app-header { flex-direction: column; align-items: stretch; }
+  .rate-box { align-items: stretch; }
+  .field-desc, .field-precio, .field-moneda, .field-cant, .field-lugar { flex: 1 1 100%; }
+  .field-add, .field-add .btn-primary { width: 100%; }
+}
