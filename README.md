@@ -38,6 +38,12 @@ HTML + CSS + JavaScript puro. Todo se guarda en el navegador (`localStorage`).
 - **Edición en línea:** clic en ✏️ y editas la fila directo; ✅ guarda, ✖️ cancela.
 - Eliminar (🗑️) artículos.
 - **Guardado automático** + botón **Guardar**.
+- **Respaldo Exportar/Importar (.json):** el botón **📤 Exportar respaldo**
+  descarga un archivo con todos tus datos (listas, histórico, presupuesto, tipo
+  de cambio). El botón **📥 Importar respaldo** carga ese archivo en otro
+  dispositivo (o restaura uno viejo). Sirve para pasar tus listas de la compu al
+  celular: exportas en uno, te pasas el archivo y lo importas en el otro.
+  Al importar se **reemplazan** los datos del dispositivo (pide confirmación).
 
 En la pestaña **Compra actual** cada artículo tiene dos checks: **Incluir**
 (lo que sí vas a comprar este mes → total preliminar) y **Comprado** (lo que ya

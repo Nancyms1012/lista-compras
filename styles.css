@@ -442,7 +442,24 @@ tr.comprado td.acciones-col { text-decoration: none; }
   align-items: center;
   gap: 14px;
 }
+.btn-sec {
+  background: #fff;
+  color: var(--azul);
+  border: 1px solid var(--azul);
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-sec:hover { background: #eef4fb; }
 .save-status { color: var(--verde-osc); font-size: 0.9rem; }
+
+@media (max-width: 640px) {
+  .app-footer { flex-wrap: wrap; }
+  .app-footer .btn-primary,
+  .app-footer .btn-sec { flex: 1 1 auto; }
+}
 
 /* ---------- Responsive ---------- */
 @media (max-width: 640px) {

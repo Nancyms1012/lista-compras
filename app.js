@@ -653,6 +653,83 @@ function mostrarDiferencia(elId, presupuesto, total) {
 }
 
 // ================================================================
+//   Exportar / Importar respaldo (.json)
+// ================================================================
+function exportarRespaldo() {
+  const datos = JSON.stringify(estado, null, 2);
+  const blob = new Blob([datos], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const fecha = new Date().toISOString().slice(0, 10); // AAAA-MM-DD
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `lista-compras-${fecha}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  const el = $("estadoGuardado");
+  el.textContent = "✓ Respaldo descargado";
+  setTimeout(() => (el.textContent = ""), 3000);
+}
+
+function importarRespaldo(archivo) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    let data;
+    try {
+      data = JSON.parse(e.target.result);
+    } catch (err) {
+      alert("El archivo no es un respaldo válido (no se pudo leer el JSON).");
+      return;
+    }
+    // Validación mínima: debe tener al menos una de las listas esperadas
+    const pareceValido =
+      data && (Array.isArray(data.actual) || Array.isArray(data.futuro) || Array.isArray(data.historico));
+    if (!pareceValido) {
+      alert("El archivo no parece un respaldo de Lista de Compras.");
+      return;
+    }
+    if (!confirm(
+      "Esto REEMPLAZARÁ todos los datos actuales de este dispositivo con los del respaldo.\n" +
+      "¿Continuar?"
+    )) return;
+
+    // Aplica el respaldo, rellenando lo que falte con los valores por defecto
+    estado = {
+      tipoCambio: TC_DEFAULT,
+      tcFecha: null,
+      aplicarDescuento: true,
+      presupuestoActual: 0,
+      presupuestoFuturo: 0,
+      actual: [],
+      futuro: [],
+      historico: [],
+      ...data,
+    };
+    estado.actual = Array.isArray(data.actual) ? data.actual : [];
+    estado.futuro = Array.isArray(data.futuro) ? data.futuro : [];
+    estado.historico = Array.isArray(data.historico) ? data.historico : [];
+    // Asegura campos nuevos en artículos viejos
+    estado.actual.forEach((it) => {
+      if (typeof it.incluir === "undefined") it.incluir = true;
+      if (typeof it.comprado === "undefined") it.comprado = false;
+      if (typeof it.pasillo === "undefined") it.pasillo = "";
+    });
+
+    guardar();
+    // Refleja valores en los campos de la interfaz
+    $("aplicarDescuento").checked = estado.aplicarDescuento;
+    $("tipoCambio").value = estado.tipoCambio;
+    $("presupuestoActual").value = estado.presupuestoActual || "";
+    $("presupuestoFuturo").value = estado.presupuestoFuturo || "";
+    render();
+    alert("✓ Respaldo importado correctamente.");
+  };
+  reader.readAsText(archivo);
+}
+
+// ================================================================
 //   Render global
 // ================================================================
 function render() {
@@ -708,6 +785,15 @@ function initEventos() {
 
   // Guardar manual
   $("btnGuardar").addEventListener("click", () => guardar(true));
+
+  // Exportar / Importar respaldo
+  $("btnExportar").addEventListener("click", exportarRespaldo);
+  $("btnImportar").addEventListener("click", () => $("archivoImportar").click());
+  $("archivoImportar").addEventListener("change", (e) => {
+    const archivo = e.target.files[0];
+    if (archivo) importarRespaldo(archivo);
+    e.target.value = ""; // permite reimportar el mismo archivo
+  });
 
   // Seleccionar todo
   $("allIncluirActual").addEventListener("change", (e) => {
