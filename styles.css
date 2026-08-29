@@ -138,11 +138,12 @@ body {
 
 .field { display: flex; flex-direction: column; gap: 4px; }
 .field label { font-size: 0.75rem; font-weight: 600; color: #555; }
-.field-desc { flex: 2 1 200px; }
-.field-lugar { flex: 1 1 130px; }
-.field-cant { flex: 0 1 90px; }
-.field-precio { flex: 1 1 120px; }
-.field-moneda { flex: 0 1 120px; }
+.field-desc { flex: 2 1 180px; }
+.field-lugar { flex: 1 1 120px; }
+.field-pasillo { flex: 1 1 110px; }
+.field-cant { flex: 0 1 85px; }
+.field-precio { flex: 1 1 110px; }
+.field-moneda { flex: 0 1 115px; }
 .field-add { flex: 0 1 auto; }
 
 .field input,
@@ -194,6 +195,41 @@ td.num, th.num { text-align: right; }
 .check-col, .acciones-col { text-align: center; width: 1%; white-space: nowrap; }
 td.check-cell { text-align: center; }
 td.check-cell input { width: 20px; height: 20px; cursor: pointer; }
+
+/* Cabecera de columnas de check (Incluir / Comprado) */
+.th-check {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.th-check input { width: 16px; height: 16px; cursor: pointer; }
+
+/* Columnas ordenables */
+th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+th.sortable:hover { background: #e7ecf2; }
+th.sortable::after { content: "↕"; opacity: 0.35; margin-left: 4px; font-size: 0.85em; }
+th.sortable.sort-asc::after { content: "▲"; opacity: 1; color: var(--azul); }
+th.sortable.sort-desc::after { content: "▼"; opacity: 1; color: var(--azul); }
+
+/* Fila excluida (no marcada en "Incluir") */
+tr.excluido td:not(.check-cell):not(.acciones-col) {
+  color: #bbb;
+  text-decoration: line-through;
+}
+
+/* Edición en línea */
+tr.editando { background: #fdf7e3; }
+td .ed {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--azul);
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+td .ed-cant, td .ed-precio { text-align: right; }
+.btn-save:hover { background: #e9f7ee; }
+.btn-cancel:hover { background: #fdecea; }
 
 .moneda-tag {
   display: inline-block;

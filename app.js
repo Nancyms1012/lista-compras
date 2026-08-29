@@ -14,9 +14,20 @@ let estado = {
   tipoCambio: TC_DEFAULT,
   tcFecha: null,          // fecha del último tipo de cambio obtenido
   aplicarDescuento: true,
-  actual: [],             // {id, desc, cant, precio, moneda}
-  futuro: []              // {id, desc, lugar, cant, precio, moneda, comprado}
+  // actual: {id, desc, pasillo, cant, precio, moneda, incluir, comprado}
+  actual: [],
+  // futuro: {id, desc, lugar, pasillo, cant, precio, moneda, comprado}
+  futuro: [],
 };
+
+// Estado de ordenamiento por pestaña (solo visual)
+const orden = {
+  actual: { key: null, dir: 1 },
+  futuro: { key: null, dir: 1 },
+};
+
+// Fila en edición inline (una a la vez, por pestaña)
+let editando = { tab: null, id: null };
 
 // ---------- Utilidades ----------
 const $ = (id) => document.getElementById(id);
@@ -57,6 +68,15 @@ function cargar() {
     estado = { ...estado, ...data };
     estado.actual = Array.isArray(data.actual) ? data.actual : [];
     estado.futuro = Array.isArray(data.futuro) ? data.futuro : [];
+    // Migración: artículos viejos de "actual" sin campo "incluir" se asumen incluidos
+    estado.actual.forEach((it) => {
+      if (typeof it.incluir === "undefined") it.incluir = true;
+      if (typeof it.comprado === "undefined") it.comprado = false;
+      if (typeof it.pasillo === "undefined") it.pasillo = "";
+    });
+    estado.futuro.forEach((it) => {
+      if (typeof it.pasillo === "undefined") it.pasillo = "";
+    });
   } catch (e) {
     console.warn("No se pudo leer el estado guardado:", e);
   }
@@ -91,6 +111,38 @@ async function buscarTipoCambio() {
   }
 }
 
+// ---------- Ordenamiento (solo visual) ----------
+function ordenarLista(tab) {
+  const { key, dir } = orden[tab];
+  const lista = estado[tab].slice(); // copia para no alterar el orden guardado
+  if (!key) return lista;
+
+  return lista.sort((a, b) => {
+    let va, vb;
+    if (key === "total") {
+      va = totalLinea(a); vb = totalLinea(b);
+    } else if (key === "cant" || key === "precio") {
+      va = Number(a[key]) || 0; vb = Number(b[key]) || 0;
+    } else {
+      // texto: desc, lugar, pasillo
+      va = (a[key] || "").toString().toLowerCase();
+      vb = (b[key] || "").toString().toLowerCase();
+    }
+    if (va < vb) return -1 * dir;
+    if (va > vb) return 1 * dir;
+    return 0;
+  });
+}
+
+function actualizarFlechasOrden(tab) {
+  document.querySelectorAll(`th.sortable[data-tab="${tab}"]`).forEach((th) => {
+    th.classList.remove("sort-asc", "sort-desc");
+    if (th.dataset.key === orden[tab].key) {
+      th.classList.add(orden[tab].dir === 1 ? "sort-asc" : "sort-desc");
+    }
+  });
+}
+
 // ================================================================
 //   TAB 1: COMPRA ACTUAL
 // ================================================================
@@ -101,9 +153,11 @@ function agregarActual(e) {
   estado.actual.push({
     id: uid(),
     desc,
+    pasillo: $("a-pasillo").value.trim(),
     cant: parseFloat($("a-cant").value) || 0,
     precio: parseFloat($("a-precio").value) || 0,
     moneda: $("a-moneda").value,
+    incluir: true,
     comprado: false,
   });
   $("formActual").reset();
@@ -116,25 +170,42 @@ function agregarActual(e) {
 function renderActual() {
   const body = $("bodyActual");
   body.innerHTML = "";
-  estado.actual.forEach((item) => {
+  const lista = ordenarLista("actual");
+
+  lista.forEach((item) => {
     const tr = document.createElement("tr");
-    if (item.comprado) tr.classList.add("comprado");
-    const simb = item.moneda === "USD" ? "$" : "₡";
-    tr.innerHTML = `
-      <td class="check-cell">
-        <input type="checkbox" class="chk-actual" data-id="${item.id}" ${item.comprado ? "checked" : ""} title="Marcar como comprado" />
-      </td>
-      <td>${escapeHtml(item.desc)}</td>
-      <td class="num">${formatNum(item.cant)}</td>
-      <td class="num">${simb}${formatNum(item.precio)}<span class="moneda-tag">${item.moneda}</span></td>
-      <td class="num">${fmtCRC(totalLinea(item))}</td>
-      <td class="acciones-col">
-        <button class="btn-icon btn-edit" data-tab="actual" data-id="${item.id}" title="Editar">✏️</button>
-        <button class="btn-icon btn-del" data-tab="actual" data-id="${item.id}" title="Eliminar">🗑️</button>
-      </td>`;
+    tr.dataset.id = item.id;
+
+    if (editando.tab === "actual" && editando.id === item.id) {
+      tr.classList.add("editando");
+      tr.innerHTML = filaEdicionActual(item);
+    } else {
+      if (!item.incluir) tr.classList.add("excluido");
+      else if (item.comprado) tr.classList.add("comprado");
+      const simb = item.moneda === "USD" ? "$" : "₡";
+      tr.innerHTML = `
+        <td class="check-cell">
+          <input type="checkbox" class="chk-incluir" data-id="${item.id}" ${item.incluir ? "checked" : ""} title="Incluir en la compra" />
+        </td>
+        <td class="check-cell">
+          <input type="checkbox" class="chk-actual" data-id="${item.id}" ${item.comprado ? "checked" : ""} ${item.incluir ? "" : "disabled"} title="Marcar como comprado" />
+        </td>
+        <td>${escapeHtml(item.desc)}</td>
+        <td>${escapeHtml(item.pasillo || "—")}</td>
+        <td class="num">${formatNum(item.cant)}</td>
+        <td class="num">${simb}${formatNum(item.precio)}<span class="moneda-tag">${item.moneda}</span></td>
+        <td class="num">${fmtCRC(totalLinea(item))}</td>
+        <td class="acciones-col">
+          <button class="btn-icon btn-edit" data-tab="actual" data-id="${item.id}" title="Editar">✏️</button>
+          <button class="btn-icon btn-del" data-tab="actual" data-id="${item.id}" title="Eliminar">🗑️</button>
+        </td>`;
+    }
     body.appendChild(tr);
   });
+
   $("vacioActual").style.display = estado.actual.length ? "none" : "block";
+  actualizarFlechasOrden("actual");
+  sincronizarCabecerasActual();
 
   // Totales de TODA la lista
   const subtotal = estado.actual.reduce((s, it) => s + totalLinea(it), 0);
@@ -143,14 +214,47 @@ function renderActual() {
   $("descuentoActual").textContent = "-" + fmtCRC(descuento);
   $("totalActual").textContent = fmtCRC(subtotal - descuento);
 
-  // Totales solo de lo MARCADO (ya comprado / en el carrito)
+  // Preliminar: solo lo marcado en "Incluir"
+  const subPrelim = estado.actual
+    .filter((it) => it.incluir)
+    .reduce((s, it) => s + totalLinea(it), 0);
+  const descPrelim = estado.aplicarDescuento ? subPrelim * 0.10 : 0;
+  $("subtotalPreliminar").textContent = fmtCRC(subPrelim);
+  $("descuentoPreliminar").textContent = "-" + fmtCRC(descPrelim);
+  $("totalPreliminar").textContent = fmtCRC(subPrelim - descPrelim);
+
+  // Comprado: Incluir Y Comprado
   const subComprado = estado.actual
-    .filter((it) => it.comprado)
+    .filter((it) => it.incluir && it.comprado)
     .reduce((s, it) => s + totalLinea(it), 0);
   const descComprado = estado.aplicarDescuento ? subComprado * 0.10 : 0;
   $("subtotalComprado").textContent = fmtCRC(subComprado);
   $("descuentoComprado").textContent = "-" + fmtCRC(descComprado);
   $("totalComprado").textContent = fmtCRC(subComprado - descComprado);
+}
+
+function filaEdicionActual(item) {
+  return `
+    <td class="check-cell">
+      <input type="checkbox" class="chk-incluir" data-id="${item.id}" ${item.incluir ? "checked" : ""} disabled />
+    </td>
+    <td class="check-cell">
+      <input type="checkbox" class="chk-actual" data-id="${item.id}" ${item.comprado ? "checked" : ""} disabled />
+    </td>
+    <td><input type="text" class="ed ed-desc" value="${escapeAttr(item.desc)}" /></td>
+    <td><input type="text" class="ed ed-pasillo" value="${escapeAttr(item.pasillo || "")}" placeholder="Pasillo" /></td>
+    <td class="num"><input type="number" class="ed ed-cant" value="${item.cant}" min="0" step="any" /></td>
+    <td class="num"><input type="number" class="ed ed-precio" value="${item.precio}" min="0" step="any" /></td>
+    <td class="num">
+      <select class="ed ed-moneda">
+        <option value="CRC" ${item.moneda === "CRC" ? "selected" : ""}>₡</option>
+        <option value="USD" ${item.moneda === "USD" ? "selected" : ""}>$</option>
+      </select>
+    </td>
+    <td class="acciones-col">
+      <button class="btn-icon btn-save" data-tab="actual" data-id="${item.id}" title="Guardar">✅</button>
+      <button class="btn-icon btn-cancel" title="Cancelar">✖️</button>
+    </td>`;
 }
 
 // ================================================================
@@ -164,6 +268,7 @@ function agregarFuturo(e) {
     id: uid(),
     desc,
     lugar: $("f-lugar").value.trim(),
+    pasillo: $("f-pasillo").value.trim(),
     cant: parseFloat($("f-cant").value) || 0,
     precio: parseFloat($("f-precio").value) || 0,
     moneda: $("f-moneda").value,
@@ -179,26 +284,39 @@ function agregarFuturo(e) {
 function renderFuturo() {
   const body = $("bodyFuturo");
   body.innerHTML = "";
-  estado.futuro.forEach((item) => {
+  const lista = ordenarLista("futuro");
+
+  lista.forEach((item) => {
     const tr = document.createElement("tr");
-    if (item.comprado) tr.classList.add("comprado");
-    const simb = item.moneda === "USD" ? "$" : "₡";
-    tr.innerHTML = `
-      <td class="check-cell">
-        <input type="checkbox" class="chk-comprado" data-id="${item.id}" ${item.comprado ? "checked" : ""} title="Marcar como comprado" />
-      </td>
-      <td>${escapeHtml(item.desc)}</td>
-      <td>${escapeHtml(item.lugar || "—")}</td>
-      <td class="num">${formatNum(item.cant)}</td>
-      <td class="num">${simb}${formatNum(item.precio)}<span class="moneda-tag">${item.moneda}</span></td>
-      <td class="num">${fmtCRC(totalLinea(item))}</td>
-      <td class="acciones-col">
-        <button class="btn-icon btn-edit" data-tab="futuro" data-id="${item.id}" title="Editar">✏️</button>
-        <button class="btn-icon btn-del" data-tab="futuro" data-id="${item.id}" title="Eliminar">🗑️</button>
-      </td>`;
+    tr.dataset.id = item.id;
+
+    if (editando.tab === "futuro" && editando.id === item.id) {
+      tr.classList.add("editando");
+      tr.innerHTML = filaEdicionFuturo(item);
+    } else {
+      if (item.comprado) tr.classList.add("comprado");
+      const simb = item.moneda === "USD" ? "$" : "₡";
+      tr.innerHTML = `
+        <td class="check-cell">
+          <input type="checkbox" class="chk-comprado" data-id="${item.id}" ${item.comprado ? "checked" : ""} title="Marcar como comprado" />
+        </td>
+        <td>${escapeHtml(item.desc)}</td>
+        <td>${escapeHtml(item.lugar || "—")}</td>
+        <td>${escapeHtml(item.pasillo || "—")}</td>
+        <td class="num">${formatNum(item.cant)}</td>
+        <td class="num">${simb}${formatNum(item.precio)}<span class="moneda-tag">${item.moneda}</span></td>
+        <td class="num">${fmtCRC(totalLinea(item))}</td>
+        <td class="acciones-col">
+          <button class="btn-icon btn-edit" data-tab="futuro" data-id="${item.id}" title="Editar">✏️</button>
+          <button class="btn-icon btn-del" data-tab="futuro" data-id="${item.id}" title="Eliminar">🗑️</button>
+        </td>`;
+    }
     body.appendChild(tr);
   });
+
   $("vacioFuturo").style.display = estado.futuro.length ? "none" : "block";
+  actualizarFlechasOrden("futuro");
+  sincronizarCabecerasFuturo();
 
   const totalOrig = estado.futuro.reduce((s, it) => s + totalLinea(it), 0);
   const comprado = estado.futuro.filter((it) => it.comprado)
@@ -208,36 +326,57 @@ function renderFuturo() {
   $("faltaFuturo").textContent = fmtCRC(totalOrig - comprado);
 }
 
+function filaEdicionFuturo(item) {
+  return `
+    <td class="check-cell">
+      <input type="checkbox" class="chk-comprado" data-id="${item.id}" ${item.comprado ? "checked" : ""} disabled />
+    </td>
+    <td><input type="text" class="ed ed-desc" value="${escapeAttr(item.desc)}" /></td>
+    <td><input type="text" class="ed ed-lugar" value="${escapeAttr(item.lugar || "")}" placeholder="Lugar" /></td>
+    <td><input type="text" class="ed ed-pasillo" value="${escapeAttr(item.pasillo || "")}" placeholder="Pasillo" /></td>
+    <td class="num"><input type="number" class="ed ed-cant" value="${item.cant}" min="0" step="any" /></td>
+    <td class="num"><input type="number" class="ed ed-precio" value="${item.precio}" min="0" step="any" /></td>
+    <td class="num">
+      <select class="ed ed-moneda">
+        <option value="CRC" ${item.moneda === "CRC" ? "selected" : ""}>₡</option>
+        <option value="USD" ${item.moneda === "USD" ? "selected" : ""}>$</option>
+      </select>
+    </td>
+    <td class="acciones-col">
+      <button class="btn-icon btn-save" data-tab="futuro" data-id="${item.id}" title="Guardar">✅</button>
+      <button class="btn-icon btn-cancel" title="Cancelar">✖️</button>
+    </td>`;
+}
+
 // ================================================================
-//   Editar / eliminar (compartido)
+//   Edición en línea
 // ================================================================
-function editarItem(tab, id) {
-  const lista = estado[tab];
-  const item = lista.find((it) => it.id === id);
+function iniciarEdicion(tab, id) {
+  editando = { tab, id };
+  render();
+}
+
+function cancelarEdicion() {
+  editando = { tab: null, id: null };
+  render();
+}
+
+function guardarEdicion(tab, id) {
+  const item = estado[tab].find((it) => it.id === id);
   if (!item) return;
+  const tr = document.querySelector(`#body${cap(tab)} tr[data-id="${id}"]`);
+  if (!tr) return;
 
-  const nuevaDesc = prompt("Descripción:", item.desc);
-  if (nuevaDesc === null) return;
-  item.desc = nuevaDesc.trim() || item.desc;
+  item.desc = tr.querySelector(".ed-desc").value.trim() || item.desc;
+  const pasilloEl = tr.querySelector(".ed-pasillo");
+  if (pasilloEl) item.pasillo = pasilloEl.value.trim();
+  const lugarEl = tr.querySelector(".ed-lugar");
+  if (lugarEl) item.lugar = lugarEl.value.trim();
+  item.cant = parseFloat(tr.querySelector(".ed-cant").value) || 0;
+  item.precio = parseFloat(tr.querySelector(".ed-precio").value) || 0;
+  item.moneda = tr.querySelector(".ed-moneda").value;
 
-  if (tab === "futuro") {
-    const nuevoLugar = prompt("Lugar (opcional):", item.lugar || "");
-    if (nuevoLugar !== null) item.lugar = nuevoLugar.trim();
-  }
-
-  const nuevaCant = prompt("Cantidad:", item.cant);
-  if (nuevaCant !== null && nuevaCant !== "") item.cant = parseFloat(nuevaCant) || 0;
-
-  const nuevaMoneda = prompt('Moneda: escribe "CRC" para colones o "USD" para dólares:', item.moneda);
-  if (nuevaMoneda !== null) {
-    const m = nuevaMoneda.trim().toUpperCase();
-    if (m === "USD" || m === "CRC") item.moneda = m;
-  }
-
-  const simb = item.moneda === "USD" ? "$" : "₡";
-  const nuevoPrecio = prompt(`Precio unitario (en ${simb}):`, item.precio);
-  if (nuevoPrecio !== null && nuevoPrecio !== "") item.precio = parseFloat(nuevoPrecio) || 0;
-
+  editando = { tab: null, id: null };
   guardar();
   render();
 }
@@ -247,8 +386,33 @@ function eliminarItem(tab, id) {
   const nombre = item ? item.desc : "este artículo";
   if (!confirm(`¿Eliminar "${nombre}"?`)) return;
   estado[tab] = estado[tab].filter((it) => it.id !== id);
+  if (editando.tab === tab && editando.id === id) editando = { tab: null, id: null };
   guardar();
   render();
+}
+
+// ================================================================
+//   Seleccionar todo (cabeceras)
+// ================================================================
+function sincronizarCabecerasActual() {
+  const items = estado.actual;
+  const allIncluir = $("allIncluirActual");
+  const allComprado = $("allCompradoActual");
+  if (allIncluir) {
+    allIncluir.checked = items.length > 0 && items.every((it) => it.incluir);
+  }
+  if (allComprado) {
+    const incluidos = items.filter((it) => it.incluir);
+    allComprado.checked = incluidos.length > 0 && incluidos.every((it) => it.comprado);
+  }
+}
+
+function sincronizarCabecerasFuturo() {
+  const items = estado.futuro;
+  const allComprado = $("allCompradoFuturo");
+  if (allComprado) {
+    allComprado.checked = items.length > 0 && items.every((it) => it.comprado);
+  }
 }
 
 // ================================================================
@@ -265,6 +429,14 @@ function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, (c) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
   }[c]));
+}
+
+function escapeAttr(str) {
+  return String(str).replace(/"/g, "&quot;");
+}
+
+function cap(s) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 // ================================================================
@@ -311,16 +483,60 @@ function initEventos() {
   // Guardar manual
   $("btnGuardar").addEventListener("click", () => guardar(true));
 
-  // Delegación: editar / eliminar / check comprado
+  // Seleccionar todo
+  $("allIncluirActual").addEventListener("change", (e) => {
+    estado.actual.forEach((it) => {
+      it.incluir = e.target.checked;
+      if (!it.incluir) it.comprado = false; // si no se incluye, no puede estar comprado
+    });
+    guardar();
+    renderActual();
+  });
+  $("allCompradoActual").addEventListener("change", (e) => {
+    estado.actual.forEach((it) => {
+      if (it.incluir) it.comprado = e.target.checked;
+    });
+    guardar();
+    renderActual();
+  });
+  $("allCompradoFuturo").addEventListener("change", (e) => {
+    estado.futuro.forEach((it) => (it.comprado = e.target.checked));
+    guardar();
+    renderFuturo();
+  });
+
+  // Ordenar por columna
+  document.querySelectorAll("th.sortable").forEach((th) => {
+    th.addEventListener("click", () => {
+      const tab = th.dataset.tab;
+      const key = th.dataset.key;
+      if (orden[tab].key === key) {
+        orden[tab].dir *= -1; // alterna asc/desc
+      } else {
+        orden[tab].key = key;
+        orden[tab].dir = 1;
+      }
+      if (tab === "actual") renderActual();
+      else renderFuturo();
+    });
+  });
+
+  // Delegación de clics: editar / eliminar / guardar / cancelar
   document.body.addEventListener("click", (e) => {
     const edit = e.target.closest(".btn-edit");
     const del = e.target.closest(".btn-del");
-    if (edit) editarItem(edit.dataset.tab, edit.dataset.id);
-    if (del) eliminarItem(del.dataset.tab, del.dataset.id);
+    const save = e.target.closest(".btn-save");
+    const cancel = e.target.closest(".btn-cancel");
+    if (edit) iniciarEdicion(edit.dataset.tab, edit.dataset.id);
+    else if (del) eliminarItem(del.dataset.tab, del.dataset.id);
+    else if (save) guardarEdicion(save.dataset.tab, save.dataset.id);
+    else if (cancel) cancelarEdicion();
   });
 
+  // Delegación de cambios: checks
   document.body.addEventListener("change", (e) => {
-    if (e.target.classList.contains("chk-comprado")) {
+    // Compras a futuro: comprado
+    if (e.target.classList.contains("chk-comprado") && !e.target.disabled) {
       const item = estado.futuro.find((it) => it.id === e.target.dataset.id);
       if (item) {
         item.comprado = e.target.checked;
@@ -328,12 +544,36 @@ function initEventos() {
         renderFuturo();
       }
     }
-    if (e.target.classList.contains("chk-actual")) {
+    // Compra actual: incluir
+    if (e.target.classList.contains("chk-incluir") && !e.target.disabled) {
+      const item = estado.actual.find((it) => it.id === e.target.dataset.id);
+      if (item) {
+        item.incluir = e.target.checked;
+        if (!item.incluir) item.comprado = false; // desmarcar comprado si se excluye
+        guardar();
+        renderActual();
+      }
+    }
+    // Compra actual: comprado
+    if (e.target.classList.contains("chk-actual") && !e.target.disabled) {
       const item = estado.actual.find((it) => it.id === e.target.dataset.id);
       if (item) {
         item.comprado = e.target.checked;
         guardar();
         renderActual();
+      }
+    }
+  });
+
+  // Enter/Escape mientras se edita en línea
+  document.body.addEventListener("keydown", (e) => {
+    if (!editando.id) return;
+    if (e.target.classList && e.target.classList.contains("ed")) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        guardarEdicion(editando.tab, editando.id);
+      } else if (e.key === "Escape") {
+        cancelarEdicion();
       }
     }
   });
