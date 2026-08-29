@@ -238,6 +238,16 @@ function renderActual() {
   actualizarFlechasOrden("actual");
   sincronizarCabecerasActual();
 
+  // Contador de artículos
+  const nTotal = estado.actual.length;
+  const nIncl = estado.actual.filter((it) => it.incluir).length;
+  const nComp = estado.actual.filter((it) => it.incluir && it.comprado).length;
+  $("contadorActual").innerHTML = nTotal
+    ? `<strong>${nTotal}</strong> artículo${nTotal === 1 ? "" : "s"} · ` +
+      `<strong>${nIncl}</strong> incluido${nIncl === 1 ? "" : "s"} · ` +
+      `<strong>${nComp}</strong> comprado${nComp === 1 ? "" : "s"}`
+    : "";
+
   // Totales de TODA la lista
   const subtotal = estado.actual.reduce((s, it) => s + totalLinea(it), 0);
   const descuento = estado.aplicarDescuento ? subtotal * 0.10 : 0;
@@ -352,6 +362,14 @@ function renderFuturo() {
   $("vacioFuturo").style.display = estado.futuro.length ? "none" : "block";
   actualizarFlechasOrden("futuro");
   sincronizarCabecerasFuturo();
+
+  // Contador de artículos
+  const nTotalF = estado.futuro.length;
+  const nCompF = estado.futuro.filter((it) => it.comprado).length;
+  $("contadorFuturo").innerHTML = nTotalF
+    ? `<strong>${nTotalF}</strong> artículo${nTotalF === 1 ? "" : "s"} · ` +
+      `<strong>${nCompF}</strong> comprado${nCompF === 1 ? "" : "s"}`
+    : "";
 
   const totalOrig = estado.futuro.reduce((s, it) => s + totalLinea(it), 0);
   const comprado = estado.futuro.filter((it) => it.comprado)

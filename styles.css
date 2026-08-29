@@ -171,6 +171,15 @@ body {
 }
 .btn-primary:hover { background: var(--verde-osc); }
 
+/* ---------- Contador de artículos ---------- */
+.contador {
+  font-size: 0.88rem;
+  color: #666;
+  margin-bottom: 8px;
+}
+.contador strong { color: var(--azul); }
+.contador:empty { display: none; }
+
 /* ---------- Table ---------- */
 .table-wrap { overflow-x: auto; }
 
