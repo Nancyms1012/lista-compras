@@ -309,6 +309,54 @@ tr.comprado td.acciones-col { text-decoration: none; }
 }
 .check-inline input { width: 18px; height: 18px; }
 
+/* ---------- Presupuesto ---------- */
+.presupuesto {
+  margin-top: 16px;
+  padding: 16px;
+  background: #eef4fb;
+  border: 1px solid #d3e2f2;
+  border-radius: 10px;
+}
+.presupuesto-input {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.presupuesto-input > label {
+  font-weight: 700;
+  color: var(--azul-osc);
+  font-size: 0.95rem;
+}
+.pres-input {
+  max-width: 220px;
+  border: 1px solid var(--gris-borde);
+}
+.pres-input input {
+  border: none;
+  width: 100%;
+  font-size: 1.05rem;
+  padding: 6px 4px;
+  background: transparent;
+}
+.pres-input input:focus { outline: none; }
+
+.presupuesto-diffs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.diff-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 1rem;
+}
+.diff-row strong { font-size: 1.05rem; }
+.dif-ok { color: var(--verde-osc); }
+.dif-mal { color: var(--rojo); }
+.dif-neutro { color: #999; }
+
 /* ---------- Acciones de lista (guardar en histórico) ---------- */
 .acciones-lista {
   margin-top: 16px;

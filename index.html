@@ -114,6 +114,20 @@
       <div class="totales-row grand"><span>Total comprado</span><strong id="totalComprado">₡0,00</strong></div>
     </div>
 
+    <div class="presupuesto">
+      <div class="presupuesto-input">
+        <label for="presupuestoActual">💰 Presupuesto disponible</label>
+        <div class="rate-input pres-input">
+          <span class="rate-symbol">₡</span>
+          <input type="number" id="presupuestoActual" min="0" step="any" placeholder="0" inputmode="decimal" />
+        </div>
+      </div>
+      <div class="presupuesto-diffs">
+        <div class="diff-row"><span>Diferencia vs Total preliminar</span><strong id="difPreliminar">₡0,00</strong></div>
+        <div class="diff-row"><span>Diferencia vs Total comprado</span><strong id="difComprado">₡0,00</strong></div>
+      </div>
+    </div>
+
     <div class="acciones-lista">
       <button type="button" class="btn-hist" data-tab="actual">📋 Guardar en histórico</button>
     </div>
@@ -129,10 +143,6 @@
       <div class="field field-lugar">
         <label for="f-lugar">Lugar</label>
         <input type="text" id="f-lugar" placeholder="Ej. Walmart" />
-      </div>
-      <div class="field field-pasillo">
-        <label for="f-pasillo">Pasillo</label>
-        <input type="text" id="f-pasillo" placeholder="Opcional" />
       </div>
       <div class="field field-cant">
         <label for="f-cant">Cantidad</label>
@@ -167,7 +177,6 @@
             </th>
             <th class="sortable" data-tab="futuro" data-key="desc">Descripción</th>
             <th class="sortable" data-tab="futuro" data-key="lugar">Lugar</th>
-            <th class="sortable" data-tab="futuro" data-key="pasillo">Pasillo</th>
             <th class="sortable num" data-tab="futuro" data-key="cant">Cantidad</th>
             <th class="sortable num" data-tab="futuro" data-key="precio">Precio unit.</th>
             <th class="sortable num" data-tab="futuro" data-key="total">Total (₡)</th>
@@ -183,6 +192,19 @@
       <div class="totales-row"><span>Total original</span><strong id="totalFuturo">₡0,00</strong></div>
       <div class="totales-row comprado-row"><span>Ya comprado</span><strong id="compradoFuturo">₡0,00</strong></div>
       <div class="totales-row grand"><span>Falta por comprar</span><strong id="faltaFuturo">₡0,00</strong></div>
+    </div>
+
+    <div class="presupuesto">
+      <div class="presupuesto-input">
+        <label for="presupuestoFuturo">💰 Presupuesto disponible</label>
+        <div class="rate-input pres-input">
+          <span class="rate-symbol">₡</span>
+          <input type="number" id="presupuestoFuturo" min="0" step="any" placeholder="0" inputmode="decimal" />
+        </div>
+      </div>
+      <div class="presupuesto-diffs">
+        <div class="diff-row"><span>Diferencia vs Falta por comprar</span><strong id="difFuturo">₡0,00</strong></div>
+      </div>
     </div>
 
     <div class="acciones-lista">

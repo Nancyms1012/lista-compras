@@ -14,9 +14,11 @@ let estado = {
   tipoCambio: TC_DEFAULT,
   tcFecha: null,          // fecha del último tipo de cambio obtenido
   aplicarDescuento: true,
+  presupuestoActual: 0,   // ₡ disponibles para la compra actual
+  presupuestoFuturo: 0,   // ₡ disponibles para compras a futuro
   // actual: {id, desc, pasillo, cant, precio, moneda, incluir, comprado}
   actual: [],
-  // futuro: {id, desc, lugar, pasillo, cant, precio, moneda, comprado}
+  // futuro: {id, desc, lugar, cant, precio, moneda, comprado}
   futuro: [],
   // historico: {id, fecha, nombre, tipo:"actual"|"futuro", items:[...], total, tipoCambio}
   historico: [],
@@ -257,9 +259,15 @@ function renderActual() {
     .filter((it) => it.incluir && it.comprado)
     .reduce((s, it) => s + totalLinea(it), 0);
   const descComprado = estado.aplicarDescuento ? subComprado * 0.10 : 0;
+  const totalCompradoVal = subComprado - descComprado;
   $("subtotalComprado").textContent = fmtCRC(subComprado);
   $("descuentoComprado").textContent = "-" + fmtCRC(descComprado);
-  $("totalComprado").textContent = fmtCRC(subComprado - descComprado);
+  $("totalComprado").textContent = fmtCRC(totalCompradoVal);
+
+  // Presupuesto vs Total preliminar y vs Total comprado
+  const totalPrelimVal = subPrelim - descPrelim;
+  mostrarDiferencia("difPreliminar", estado.presupuestoActual, totalPrelimVal);
+  mostrarDiferencia("difComprado", estado.presupuestoActual, totalCompradoVal);
 }
 
 function filaEdicionActual(item) {
@@ -297,7 +305,6 @@ function agregarFuturo(e) {
     id: uid(),
     desc,
     lugar: $("f-lugar").value.trim(),
-    pasillo: $("f-pasillo").value.trim(),
     cant: parseFloat($("f-cant").value) || 0,
     precio: parseFloat($("f-precio").value) || 0,
     moneda: $("f-moneda").value,
@@ -331,7 +338,6 @@ function renderFuturo() {
         </td>
         <td>${escapeHtml(item.desc)}</td>
         <td>${escapeHtml(item.lugar || "—")}</td>
-        <td>${escapeHtml(item.pasillo || "—")}</td>
         <td class="num">${formatNum(item.cant)}</td>
         <td class="num">${simb}${formatNum(item.precio)}<span class="moneda-tag">${item.moneda}</span></td>
         <td class="num">${fmtCRC(totalLinea(item))}</td>
@@ -350,9 +356,13 @@ function renderFuturo() {
   const totalOrig = estado.futuro.reduce((s, it) => s + totalLinea(it), 0);
   const comprado = estado.futuro.filter((it) => it.comprado)
     .reduce((s, it) => s + totalLinea(it), 0);
+  const falta = totalOrig - comprado;
   $("totalFuturo").textContent = fmtCRC(totalOrig);
   $("compradoFuturo").textContent = fmtCRC(comprado);
-  $("faltaFuturo").textContent = fmtCRC(totalOrig - comprado);
+  $("faltaFuturo").textContent = fmtCRC(falta);
+
+  // Presupuesto vs Falta por comprar
+  mostrarDiferencia("difFuturo", estado.presupuestoFuturo, falta);
 }
 
 function filaEdicionFuturo(item) {
@@ -362,7 +372,6 @@ function filaEdicionFuturo(item) {
     </td>
     <td><input type="text" class="ed ed-desc" value="${escapeAttr(item.desc)}" /></td>
     <td><input type="text" class="ed ed-lugar" value="${escapeAttr(item.lugar || "")}" placeholder="Lugar" /></td>
-    <td><input type="text" class="ed ed-pasillo" value="${escapeAttr(item.pasillo || "")}" placeholder="Pasillo" /></td>
     <td class="num"><input type="number" class="ed ed-cant" value="${item.cant}" min="0" step="any" /></td>
     <td class="num"><input type="number" class="ed ed-precio" value="${item.precio}" min="0" step="any" /></td>
     <td class="num">
@@ -540,8 +549,7 @@ function renderHistorico() {
           <thead>
             <tr>
               <th>Descripción</th>
-              ${h.tipo === "futuro" ? "<th>Lugar</th>" : ""}
-              <th>Pasillo</th>
+              ${h.tipo === "futuro" ? "<th>Lugar</th>" : "<th>Pasillo</th>"}
               <th class="num">Cant.</th>
               <th class="num">Precio</th>
               <th class="num">Total (₡)</th>
@@ -552,8 +560,7 @@ function renderHistorico() {
               const simb = it.moneda === "USD" ? "$" : "₡";
               return `<tr>
                 <td>${escapeHtml(it.desc)}</td>
-                ${h.tipo === "futuro" ? `<td>${escapeHtml(it.lugar || "—")}</td>` : ""}
-                <td>${escapeHtml(it.pasillo || "—")}</td>
+                ${h.tipo === "futuro" ? `<td>${escapeHtml(it.lugar || "—")}</td>` : `<td>${escapeHtml(it.pasillo || "—")}</td>`}
                 <td class="num">${formatNum(it.cant)}</td>
                 <td class="num">${simb}${formatNum(it.precio)}</td>
                 <td class="num">${fmtCRC(totalHistLinea(it, h.tipoCambio))}</td>
@@ -604,6 +611,29 @@ function cap(s) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+// Muestra la diferencia presupuesto - total con color y mensaje
+function mostrarDiferencia(elId, presupuesto, total) {
+  const el = $(elId);
+  if (!el) return;
+  const pres = Number(presupuesto) || 0;
+  const dif = pres - total;
+  el.classList.remove("dif-ok", "dif-mal", "dif-neutro");
+
+  if (pres <= 0) {
+    // Sin presupuesto definido: solo muestra el total pendiente, sin juicio
+    el.textContent = fmtCRC(0);
+    el.classList.add("dif-neutro");
+    return;
+  }
+  if (dif >= 0) {
+    el.textContent = "Te sobran " + fmtCRC(dif);
+    el.classList.add("dif-ok");
+  } else {
+    el.textContent = "Te faltan " + fmtCRC(Math.abs(dif));
+    el.classList.add("dif-mal");
+  }
+}
+
 // ================================================================
 //   Render global
 // ================================================================
@@ -645,6 +675,18 @@ function initEventos() {
     render();
   });
   $("btnRefrescarTC").addEventListener("click", buscarTipoCambio);
+
+  // Presupuesto
+  $("presupuestoActual").addEventListener("input", (e) => {
+    estado.presupuestoActual = parseFloat(e.target.value) || 0;
+    guardar();
+    renderActual();
+  });
+  $("presupuestoFuturo").addEventListener("input", (e) => {
+    estado.presupuestoFuturo = parseFloat(e.target.value) || 0;
+    guardar();
+    renderFuturo();
+  });
 
   // Guardar manual
   $("btnGuardar").addEventListener("click", () => guardar(true));
@@ -764,6 +806,8 @@ function init() {
   cargar();
   $("aplicarDescuento").checked = estado.aplicarDescuento;
   $("tipoCambio").value = estado.tipoCambio;
+  if (estado.presupuestoActual) $("presupuestoActual").value = estado.presupuestoActual;
+  if (estado.presupuestoFuturo) $("presupuestoFuturo").value = estado.presupuestoFuturo;
   initEventos();
   render();
   buscarTipoCambio(); // busca el tipo de cambio del día automáticamente
