@@ -121,20 +121,46 @@ function ordenarLista(tab) {
   if (!key) return lista;
 
   return lista.sort((a, b) => {
-    let va, vb;
     if (key === "total") {
-      va = totalLinea(a); vb = totalLinea(b);
-    } else if (key === "cant" || key === "precio") {
-      va = Number(a[key]) || 0; vb = Number(b[key]) || 0;
-    } else {
-      // texto: desc, lugar, pasillo
-      va = (a[key] || "").toString().toLowerCase();
-      vb = (b[key] || "").toString().toLowerCase();
+      return (totalLinea(a) - totalLinea(b)) * dir;
     }
+    if (key === "cant" || key === "precio") {
+      return ((Number(a[key]) || 0) - (Number(b[key]) || 0)) * dir;
+    }
+    if (key === "pasillo") {
+      // El pasillo se ordena numéricamente (1, 2, 3… 10, 11).
+      // Los vacíos van siempre al final; el texto (ej. "Panadería") va después de los números.
+      return compararPasillo(a.pasillo, b.pasillo) * dir;
+    }
+    // texto: desc, lugar
+    const va = (a[key] || "").toString().toLowerCase();
+    const vb = (b[key] || "").toString().toLowerCase();
     if (va < vb) return -1 * dir;
     if (va > vb) return 1 * dir;
     return 0;
   });
+}
+
+// Compara pasillos: número < número por valor; vacíos al final;
+// si no es número (texto), se ordena alfabético después de los números.
+function compararPasillo(a, b) {
+  const sa = (a || "").toString().trim();
+  const sb = (b || "").toString().trim();
+  const emptyA = sa === "";
+  const emptyB = sb === "";
+  if (emptyA && emptyB) return 0;
+  if (emptyA) return 1;   // vacío siempre al final (sin importar dir, ver nota)
+  if (emptyB) return -1;
+
+  const na = parseFloat(sa.replace(",", "."));
+  const nb = parseFloat(sb.replace(",", "."));
+  const isNumA = !isNaN(na) && /^[\d.,]+$/.test(sa);
+  const isNumB = !isNaN(nb) && /^[\d.,]+$/.test(sb);
+
+  if (isNumA && isNumB) return na - nb;      // ambos números → por valor
+  if (isNumA) return -1;                     // números antes que texto
+  if (isNumB) return 1;
+  return sa.toLowerCase() < sb.toLowerCase() ? -1 : sa.toLowerCase() > sb.toLowerCase() ? 1 : 0;
 }
 
 function actualizarFlechasOrden(tab) {
