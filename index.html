@@ -23,6 +23,7 @@
   <nav class="tabs">
     <button type="button" class="tab active" data-tab="actual">Compra actual</button>
     <button type="button" class="tab" data-tab="futuro">Compras a futuro</button>
+    <button type="button" class="tab" data-tab="compras">Compras</button>
     <button type="button" class="tab" data-tab="historico">Histórico</button>
   </nav>
 
@@ -146,6 +147,10 @@
         <label for="f-lugar">Lugar</label>
         <input type="text" id="f-lugar" placeholder="Ej. Walmart" />
       </div>
+      <div class="field field-url">
+        <label for="f-url">URL</label>
+        <input type="url" id="f-url" placeholder="https://… (opcional)" />
+      </div>
       <div class="field field-cant">
         <label for="f-cant">Cantidad</label>
         <input type="number" id="f-cant" min="0" step="any" value="1" required />
@@ -181,6 +186,7 @@
             </th>
             <th class="sortable" data-tab="futuro" data-key="desc">Descripción</th>
             <th class="sortable" data-tab="futuro" data-key="lugar">Lugar</th>
+            <th>URL</th>
             <th class="sortable num" data-tab="futuro" data-key="cant">Cantidad</th>
             <th class="sortable num" data-tab="futuro" data-key="precio">Precio unit.</th>
             <th class="sortable num" data-tab="futuro" data-key="total">Total (₡)</th>
@@ -216,7 +222,85 @@
     </div>
   </section>
 
-  <!-- ==================== TAB 3: HISTÓRICO ==================== -->
+  <!-- ==================== TAB 3: COMPRAS (gastos reales) ==================== -->
+  <section id="tab-compras" class="tab-panel">
+    <form id="formCompras" class="item-form">
+      <div class="field field-fecha">
+        <label for="c-fecha">Fecha</label>
+        <input type="date" id="c-fecha" required />
+      </div>
+      <div class="field field-desc">
+        <label for="c-desc">Descripción</label>
+        <input type="text" id="c-desc" placeholder="Ej. Supermercado" required />
+      </div>
+      <div class="field field-lugar">
+        <label for="c-lugar">Lugar</label>
+        <input type="text" id="c-lugar" placeholder="Opcional" />
+      </div>
+      <div class="field field-cant">
+        <label for="c-cant">Cantidad</label>
+        <input type="number" id="c-cant" min="0" step="any" value="1" required />
+      </div>
+      <div class="field field-precio">
+        <label for="c-precio">Precio unitario</label>
+        <input type="number" id="c-precio" min="0" step="any" placeholder="0" required />
+      </div>
+      <div class="field field-moneda">
+        <label for="c-moneda">Moneda</label>
+        <select id="c-moneda">
+          <option value="CRC">₡ Colones</option>
+          <option value="USD">$ Dólares</option>
+        </select>
+      </div>
+      <div class="field field-add">
+        <label>&nbsp;</label>
+        <button type="submit" class="btn-primary" id="c-submit">Agregar</button>
+      </div>
+    </form>
+
+    <div class="contador" id="contadorCompras"></div>
+
+    <div class="table-wrap">
+      <table id="tablaCompras" class="tabla-datos">
+        <thead>
+          <tr>
+            <th class="sortable" data-tab="compras" data-key="fecha">Fecha</th>
+            <th class="sortable" data-tab="compras" data-key="desc">Descripción</th>
+            <th class="sortable" data-tab="compras" data-key="lugar">Lugar</th>
+            <th class="sortable num" data-tab="compras" data-key="cant">Cantidad</th>
+            <th class="sortable num" data-tab="compras" data-key="precio">Precio unit.</th>
+            <th class="sortable num" data-tab="compras" data-key="total">Total (₡)</th>
+            <th class="acciones-col">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="bodyCompras"></tbody>
+      </table>
+      <p id="vacioCompras" class="empty">No hay compras registradas todavía. Agrega la primera arriba. 👆</p>
+    </div>
+
+    <div class="totales">
+      <div class="totales-row grand"><span>Total gastado</span><strong id="totalCompras">₡0,00</strong></div>
+    </div>
+
+    <div class="presupuesto">
+      <div class="presupuesto-input">
+        <label for="presupuestoCompras">💰 Presupuesto disponible</label>
+        <div class="rate-input pres-input">
+          <span class="rate-symbol">₡</span>
+          <input type="number" id="presupuestoCompras" min="0" step="any" placeholder="0" inputmode="decimal" />
+        </div>
+      </div>
+      <div class="presupuesto-diffs">
+        <div class="diff-row"><span>Diferencia vs Total gastado</span><strong id="difCompras">₡0,00</strong></div>
+      </div>
+    </div>
+
+    <div class="acciones-lista">
+      <button type="button" class="btn-hist" data-tab="compras">📋 Guardar en histórico</button>
+    </div>
+  </section>
+
+  <!-- ==================== TAB 4: HISTÓRICO ==================== -->
   <section id="tab-historico" class="tab-panel">
     <p class="hist-intro">Aquí quedan guardadas las listas que has archivado. Puedes ver el detalle, volver a cargarlas o eliminarlas.</p>
     <div id="listaHistorico" class="hist-lista"></div>

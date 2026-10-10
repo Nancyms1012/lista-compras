@@ -13,11 +13,21 @@ HTML + CSS + JavaScript puro. Todo se guarda en el navegador (`localStorage`).
 - **Total a pagar** = subtotal − descuento.
 
 ### Pestaña 2 — Compras a futuro
-- Agregar artículos con **descripción**, **lugar** donde se compraría, **cantidad** y **precio**.
+- Agregar artículos con **descripción**, **lugar** donde se compraría, **URL**
+  (link opcional al producto, se abre en pestaña nueva), **cantidad** y **precio**.
 - Casilla **✓** para marcar cada artículo cuando ya se compró.
 - Resumen: **Total original**, **Ya comprado** y **Falta por comprar** (se va restando).
 
-### Pestaña 3 — Histórico
+### Pestaña — Compras (gastos reales)
+- Registro de compras **ya realizadas** que se van acumulando.
+- Campos: **fecha** (por defecto hoy), descripción, lugar (opcional), cantidad,
+  precio unitario y moneda (₡/$).
+- Muestra el **Total gastado** acumulado y la diferencia contra un
+  **presupuesto disponible**.
+- Sin descuento (son precios finales ya pagados). Se puede ordenar por columna
+  (incluida la fecha) y guardar en el histórico.
+
+### Pestaña — Histórico
 - Botón **📋 Guardar en histórico** en cada lista: guarda una copia con fecha y
   nombre. La lista activa **no se borra**.
 - Cada entrada muestra nombre, tipo, cantidad de artículos, fecha y total.

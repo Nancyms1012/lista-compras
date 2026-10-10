@@ -16,11 +16,14 @@ let estado = {
   aplicarDescuento: true,
   presupuestoActual: 0,   // ₡ disponibles para la compra actual
   presupuestoFuturo: 0,   // ₡ disponibles para compras a futuro
+  presupuestoCompras: 0,  // ₡ disponibles para compras (gastos reales)
   // actual: {id, desc, pasillo, cant, precio, moneda, incluir, comprado}
   actual: [],
-  // futuro: {id, desc, lugar, cant, precio, moneda, comprado}
+  // futuro: {id, desc, lugar, url, cant, precio, moneda, comprado}
   futuro: [],
-  // historico: {id, fecha, nombre, tipo:"actual"|"futuro", items:[...], total, tipoCambio}
+  // compras: {id, fecha, desc, lugar, cant, precio, moneda}  (gastos reales)
+  compras: [],
+  // historico: {id, fecha, nombre, tipo:"actual"|"futuro"|"compras", items:[...], total, tipoCambio}
   historico: [],
 };
 
@@ -28,6 +31,7 @@ let estado = {
 const orden = {
   actual: { key: null, dir: 1 },
   futuro: { key: null, dir: 1 },
+  compras: { key: null, dir: 1 },
 };
 
 // Fila en edición inline (una a la vez, por pestaña)
@@ -72,6 +76,7 @@ function cargar() {
     estado = { ...estado, ...data };
     estado.actual = Array.isArray(data.actual) ? data.actual : [];
     estado.futuro = Array.isArray(data.futuro) ? data.futuro : [];
+    estado.compras = Array.isArray(data.compras) ? data.compras : [];
     estado.historico = Array.isArray(data.historico) ? data.historico : [];
     // Migración: artículos viejos de "actual" sin campo "incluir" se asumen incluidos
     estado.actual.forEach((it) => {
@@ -80,7 +85,7 @@ function cargar() {
       if (typeof it.pasillo === "undefined") it.pasillo = "";
     });
     estado.futuro.forEach((it) => {
-      if (typeof it.pasillo === "undefined") it.pasillo = "";
+      if (typeof it.url === "undefined") it.url = "";
     });
   } catch (e) {
     console.warn("No se pudo leer el estado guardado:", e);
@@ -133,6 +138,14 @@ function ordenarLista(tab) {
       // El pasillo se ordena numéricamente (1, 2, 3… 10, 11).
       // Los vacíos van siempre al final; el texto (ej. "Panadería") va después de los números.
       return compararPasillo(a.pasillo, b.pasillo) * dir;
+    }
+    if (key === "fecha") {
+      // Fecha en formato AAAA-MM-DD: comparación de texto equivale a cronológica
+      const fa = a.fecha || "";
+      const fb = b.fecha || "";
+      if (fa < fb) return -1 * dir;
+      if (fa > fb) return 1 * dir;
+      return 0;
     }
     // texto: desc, lugar
     const va = (a[key] || "").toString().toLowerCase();
@@ -315,6 +328,7 @@ function agregarFuturo(e) {
     id: uid(),
     desc,
     lugar: $("f-lugar").value.trim(),
+    url: $("f-url").value.trim(),
     cant: parseFloat($("f-cant").value) || 0,
     precio: parseFloat($("f-precio").value) || 0,
     moneda: $("f-moneda").value,
@@ -348,6 +362,7 @@ function renderFuturo() {
         </td>
         <td>${escapeHtml(item.desc)}</td>
         <td>${escapeHtml(item.lugar || "—")}</td>
+        <td>${item.url ? `<a href="${escapeAttr(item.url)}" target="_blank" rel="noopener" class="link-url">🔗 Ver</a>` : "—"}</td>
         <td class="num">${formatNum(item.cant)}</td>
         <td class="num">${simb}${formatNum(item.precio)}<span class="moneda-tag">${item.moneda}</span></td>
         <td class="num">${fmtCRC(totalLinea(item))}</td>
@@ -390,6 +405,7 @@ function filaEdicionFuturo(item) {
     </td>
     <td><input type="text" class="ed ed-desc" value="${escapeAttr(item.desc)}" /></td>
     <td><input type="text" class="ed ed-lugar" value="${escapeAttr(item.lugar || "")}" placeholder="Lugar" /></td>
+    <td><input type="url" class="ed ed-url" value="${escapeAttr(item.url || "")}" placeholder="https://…" /></td>
     <td class="num"><input type="number" class="ed ed-cant" value="${item.cant}" min="0" step="any" /></td>
     <td class="num"><input type="number" class="ed ed-precio" value="${item.precio}" min="0" step="any" /></td>
     <td class="num">
@@ -400,6 +416,95 @@ function filaEdicionFuturo(item) {
     </td>
     <td class="acciones-col">
       <button class="btn-icon btn-save" data-tab="futuro" data-id="${item.id}" title="Guardar">✅</button>
+      <button class="btn-icon btn-cancel" title="Cancelar">✖️</button>
+    </td>`;
+}
+
+// ================================================================
+//   TAB 3: COMPRAS (gastos reales)
+// ================================================================
+function agregarCompras(e) {
+  e.preventDefault();
+  const desc = $("c-desc").value.trim();
+  if (!desc) return;
+  estado.compras.push({
+    id: uid(),
+    fecha: $("c-fecha").value || hoyISO(),
+    desc,
+    lugar: $("c-lugar").value.trim(),
+    cant: parseFloat($("c-cant").value) || 0,
+    precio: parseFloat($("c-precio").value) || 0,
+    moneda: $("c-moneda").value,
+  });
+  $("formCompras").reset();
+  $("c-cant").value = 1;
+  $("c-fecha").value = hoyISO();
+  $("c-desc").focus();
+  guardar();
+  render();
+}
+
+function renderCompras() {
+  const body = $("bodyCompras");
+  body.innerHTML = "";
+  const lista = ordenarLista("compras");
+
+  lista.forEach((item) => {
+    const tr = document.createElement("tr");
+    tr.dataset.id = item.id;
+
+    if (editando.tab === "compras" && editando.id === item.id) {
+      tr.classList.add("editando");
+      tr.innerHTML = filaEdicionCompras(item);
+    } else {
+      const simb = item.moneda === "USD" ? "$" : "₡";
+      tr.innerHTML = `
+        <td>${escapeHtml(fmtFecha(item.fecha))}</td>
+        <td>${escapeHtml(item.desc)}</td>
+        <td>${escapeHtml(item.lugar || "—")}</td>
+        <td class="num">${formatNum(item.cant)}</td>
+        <td class="num">${simb}${formatNum(item.precio)}<span class="moneda-tag">${item.moneda}</span></td>
+        <td class="num">${fmtCRC(totalLinea(item))}</td>
+        <td class="acciones-col">
+          <button class="btn-icon btn-edit" data-tab="compras" data-id="${item.id}" title="Editar">✏️</button>
+          <button class="btn-icon btn-del" data-tab="compras" data-id="${item.id}" title="Eliminar">🗑️</button>
+        </td>`;
+    }
+    body.appendChild(tr);
+  });
+
+  $("vacioCompras").style.display = estado.compras.length ? "none" : "block";
+  actualizarFlechasOrden("compras");
+
+  // Contador
+  const nTotal = estado.compras.length;
+  $("contadorCompras").innerHTML = nTotal
+    ? `<strong>${nTotal}</strong> compra${nTotal === 1 ? "" : "s"} registrada${nTotal === 1 ? "" : "s"}`
+    : "";
+
+  // Total gastado acumulado
+  const totalGastado = estado.compras.reduce((s, it) => s + totalLinea(it), 0);
+  $("totalCompras").textContent = fmtCRC(totalGastado);
+
+  // Presupuesto vs Total gastado
+  mostrarDiferencia("difCompras", estado.presupuestoCompras, totalGastado);
+}
+
+function filaEdicionCompras(item) {
+  return `
+    <td><input type="date" class="ed ed-fecha" value="${escapeAttr(item.fecha || "")}" /></td>
+    <td><input type="text" class="ed ed-desc" value="${escapeAttr(item.desc)}" /></td>
+    <td><input type="text" class="ed ed-lugar" value="${escapeAttr(item.lugar || "")}" placeholder="Lugar" /></td>
+    <td class="num"><input type="number" class="ed ed-cant" value="${item.cant}" min="0" step="any" /></td>
+    <td class="num"><input type="number" class="ed ed-precio" value="${item.precio}" min="0" step="any" /></td>
+    <td class="num">
+      <select class="ed ed-moneda">
+        <option value="CRC" ${item.moneda === "CRC" ? "selected" : ""}>₡</option>
+        <option value="USD" ${item.moneda === "USD" ? "selected" : ""}>$</option>
+      </select>
+    </td>
+    <td class="acciones-col">
+      <button class="btn-icon btn-save" data-tab="compras" data-id="${item.id}" title="Guardar">✅</button>
       <button class="btn-icon btn-cancel" title="Cancelar">✖️</button>
     </td>`;
 }
@@ -428,6 +533,10 @@ function guardarEdicion(tab, id) {
   if (pasilloEl) item.pasillo = pasilloEl.value.trim();
   const lugarEl = tr.querySelector(".ed-lugar");
   if (lugarEl) item.lugar = lugarEl.value.trim();
+  const urlEl = tr.querySelector(".ed-url");
+  if (urlEl) item.url = urlEl.value.trim();
+  const fechaEl = tr.querySelector(".ed-fecha");
+  if (fechaEl) item.fecha = fechaEl.value;
   item.cant = parseFloat(tr.querySelector(".ed-cant").value) || 0;
   item.precio = parseFloat(tr.querySelector(".ed-precio").value) || 0;
   item.moneda = tr.querySelector(".ed-moneda").value;
@@ -480,8 +589,9 @@ function guardarEnHistorico(tab) {
     alert("La lista está vacía, no hay nada que guardar.");
     return;
   }
+  const nombreTab = { actual: "Compra", futuro: "Compras a futuro", compras: "Compras" };
   const nombreDef =
-    (tab === "actual" ? "Compra" : "Compras a futuro") +
+    (nombreTab[tab] || "Lista") +
     " " + new Date().toLocaleDateString("es-CR");
   const nombre = prompt("Nombre para esta lista en el histórico:", nombreDef);
   if (nombre === null) return; // canceló
@@ -512,7 +622,8 @@ function eliminarHistorico(id) {
 function cargarDesdeHistorico(id) {
   const h = estado.historico.find((x) => x.id === id);
   if (!h) return;
-  const destino = h.tipo === "actual" ? "Compra actual" : "Compras a futuro";
+  const nombreTab = { actual: "Compra actual", futuro: "Compras a futuro", compras: "Compras" };
+  const destino = nombreTab[h.tipo] || h.tipo;
   if (!confirm(
     `Esto reemplazará tu lista de "${destino}" con la copia guardada "${h.nombre}".\n` +
     `¿Continuar? (tu lista actual se perderá si no la has guardado)`
@@ -526,9 +637,9 @@ function cargarDesdeHistorico(id) {
       if (typeof it.comprado === "undefined") it.comprado = false;
       if (typeof it.pasillo === "undefined") it.pasillo = "";
     });
-  } else {
+  } else if (h.tipo === "futuro") {
     estado.futuro.forEach((it) => {
-      if (typeof it.pasillo === "undefined") it.pasillo = "";
+      if (typeof it.url === "undefined") it.url = "";
     });
   }
   guardar(true);
@@ -549,7 +660,8 @@ function renderHistorico() {
     const fecha = new Date(h.fecha).toLocaleString("es-CR", {
       dateStyle: "medium", timeStyle: "short",
     });
-    const tipoTxt = h.tipo === "actual" ? "Compra actual" : "Compras a futuro";
+    const nombreTab = { actual: "Compra actual", futuro: "Compras a futuro", compras: "Compras" };
+    const tipoTxt = nombreTab[h.tipo] || h.tipo;
     const nItems = h.items.length;
 
     const card = document.createElement("div");
@@ -566,8 +678,9 @@ function renderHistorico() {
         <table class="hist-tabla">
           <thead>
             <tr>
+              ${h.tipo === "compras" ? "<th>Fecha</th>" : ""}
               <th>Descripción</th>
-              ${h.tipo === "futuro" ? "<th>Lugar</th>" : "<th>Pasillo</th>"}
+              ${h.tipo === "actual" ? "<th>Pasillo</th>" : "<th>Lugar</th>"}
               <th class="num">Cant.</th>
               <th class="num">Precio</th>
               <th class="num">Total (₡)</th>
@@ -576,9 +689,13 @@ function renderHistorico() {
           <tbody>
             ${h.items.map((it) => {
               const simb = it.moneda === "USD" ? "$" : "₡";
+              const segunda = h.tipo === "actual"
+                ? `<td>${escapeHtml(it.pasillo || "—")}</td>`
+                : `<td>${escapeHtml(it.lugar || "—")}</td>`;
               return `<tr>
+                ${h.tipo === "compras" ? `<td>${escapeHtml(fmtFecha(it.fecha))}</td>` : ""}
                 <td>${escapeHtml(it.desc)}</td>
-                ${h.tipo === "futuro" ? `<td>${escapeHtml(it.lugar || "—")}</td>` : `<td>${escapeHtml(it.pasillo || "—")}</td>`}
+                ${segunda}
                 <td class="num">${formatNum(it.cant)}</td>
                 <td class="num">${simb}${formatNum(it.precio)}</td>
                 <td class="num">${fmtCRC(totalHistLinea(it, h.tipoCambio))}</td>
@@ -627,6 +744,21 @@ function escapeAttr(str) {
 
 function cap(s) {
   return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+// Fecha de hoy en formato AAAA-MM-DD (para input type=date)
+function hoyISO() {
+  const d = new Date();
+  const off = d.getTimezoneOffset();
+  return new Date(d.getTime() - off * 60000).toISOString().slice(0, 10);
+}
+
+// Muestra una fecha AAAA-MM-DD en formato local es-CR (dd/mm/aaaa)
+function fmtFecha(iso) {
+  if (!iso) return "—";
+  const partes = iso.split("-");
+  if (partes.length !== 3) return iso;
+  return `${partes[2]}/${partes[1]}/${partes[0]}`;
 }
 
 // Muestra la diferencia presupuesto - total con color y mensaje
@@ -685,7 +817,8 @@ function importarRespaldo(archivo) {
     }
     // Validación mínima: debe tener al menos una de las listas esperadas
     const pareceValido =
-      data && (Array.isArray(data.actual) || Array.isArray(data.futuro) || Array.isArray(data.historico));
+      data && (Array.isArray(data.actual) || Array.isArray(data.futuro) ||
+               Array.isArray(data.compras) || Array.isArray(data.historico));
     if (!pareceValido) {
       alert("El archivo no parece un respaldo de Lista de Compras.");
       return;
@@ -702,19 +835,25 @@ function importarRespaldo(archivo) {
       aplicarDescuento: true,
       presupuestoActual: 0,
       presupuestoFuturo: 0,
+      presupuestoCompras: 0,
       actual: [],
       futuro: [],
+      compras: [],
       historico: [],
       ...data,
     };
     estado.actual = Array.isArray(data.actual) ? data.actual : [];
     estado.futuro = Array.isArray(data.futuro) ? data.futuro : [];
+    estado.compras = Array.isArray(data.compras) ? data.compras : [];
     estado.historico = Array.isArray(data.historico) ? data.historico : [];
     // Asegura campos nuevos en artículos viejos
     estado.actual.forEach((it) => {
       if (typeof it.incluir === "undefined") it.incluir = true;
       if (typeof it.comprado === "undefined") it.comprado = false;
       if (typeof it.pasillo === "undefined") it.pasillo = "";
+    });
+    estado.futuro.forEach((it) => {
+      if (typeof it.url === "undefined") it.url = "";
     });
 
     guardar();
@@ -723,6 +862,7 @@ function importarRespaldo(archivo) {
     $("tipoCambio").value = estado.tipoCambio;
     $("presupuestoActual").value = estado.presupuestoActual || "";
     $("presupuestoFuturo").value = estado.presupuestoFuturo || "";
+    $("presupuestoCompras").value = estado.presupuestoCompras || "";
     render();
     alert("✓ Respaldo importado correctamente.");
   };
@@ -735,6 +875,7 @@ function importarRespaldo(archivo) {
 function render() {
   renderActual();
   renderFuturo();
+  renderCompras();
   renderHistorico();
 }
 
@@ -755,6 +896,7 @@ function initEventos() {
   // Formularios
   $("formActual").addEventListener("submit", agregarActual);
   $("formFuturo").addEventListener("submit", agregarFuturo);
+  $("formCompras").addEventListener("submit", agregarCompras);
 
   // Descuento
   $("aplicarDescuento").addEventListener("change", (e) => {
@@ -781,6 +923,11 @@ function initEventos() {
     estado.presupuestoFuturo = parseFloat(e.target.value) || 0;
     guardar();
     renderFuturo();
+  });
+  $("presupuestoCompras").addEventListener("input", (e) => {
+    estado.presupuestoCompras = parseFloat(e.target.value) || 0;
+    guardar();
+    renderCompras();
   });
 
   // Guardar manual
@@ -829,7 +976,8 @@ function initEventos() {
         orden[tab].dir = 1;
       }
       if (tab === "actual") renderActual();
-      else renderFuturo();
+      else if (tab === "futuro") renderFuturo();
+      else if (tab === "compras") renderCompras();
     });
   });
 
@@ -912,6 +1060,8 @@ function init() {
   $("tipoCambio").value = estado.tipoCambio;
   if (estado.presupuestoActual) $("presupuestoActual").value = estado.presupuestoActual;
   if (estado.presupuestoFuturo) $("presupuestoFuturo").value = estado.presupuestoFuturo;
+  if (estado.presupuestoCompras) $("presupuestoCompras").value = estado.presupuestoCompras;
+  $("c-fecha").value = hoyISO(); // fecha de hoy por defecto en Compras
   initEventos();
   render();
   buscarTipoCambio(); // busca el tipo de cambio del día automáticamente
