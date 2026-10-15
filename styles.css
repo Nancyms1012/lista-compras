@@ -321,6 +321,8 @@ tr.comprado td.acciones-col { text-decoration: none; }
 }
 .descuento-row strong { color: var(--rojo); }
 .comprado-row strong { color: var(--verde); }
+.dolar-row { color: #777; font-size: 0.92rem; }
+.dolar-row strong { color: #555; }
 .check-inline {
   display: flex;
   align-items: center;

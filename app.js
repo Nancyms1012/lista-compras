@@ -50,6 +50,18 @@ const fmtCRC = (n) =>
     maximumFractionDigits: 2,
   });
 
+const fmtUSD = (n) =>
+  "$" + (Number(n) || 0).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+// Convierte un monto en colones a dólares usando el tipo de cambio actual
+function aDolares(colones) {
+  const tc = Number(estado.tipoCambio) || 0;
+  return tc > 0 ? (Number(colones) || 0) / tc : 0;
+}
+
 // Convierte el precio de una línea a colones según su moneda
 function aColones(precio, moneda) {
   const p = Number(precio) || 0;
@@ -604,6 +616,7 @@ function renderOrdenes() {
   const total = estado.ordenes.reduce((s, it) => s + costoOrdenCRC(it), 0);
   const enCr = estado.ordenes.filter((it) => it.enCr).reduce((s, it) => s + costoOrdenCRC(it), 0);
   $("totalOrdenes").textContent = fmtCRC(total);
+  $("totalOrdenesUSD").textContent = fmtUSD(aDolares(total));
   $("enCrOrdenes").textContent = fmtCRC(enCr);
   $("transitoOrdenes").textContent = fmtCRC(total - enCr);
 }
