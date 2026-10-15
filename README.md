@@ -30,11 +30,13 @@ HTML + CSS + JavaScript puro. Todo se guarda en el navegador (`localStorage`).
 ### Pestaña — Órdenes (compras por internet)
 - Seguimiento de órdenes de compra online.
 - Campos: **# Orden**, **Tienda** (opcional), **Ítem**, **URL** (opcional),
-  **Tracking** (opcional) y **Costo** con moneda ₡/$.
+  **Tracking** (opcional), **Costo**, **Descuento**, **Taxes** (todos en la
+  misma moneda ₡/$ de la orden). Total por orden = Costo − Descuento + Taxes.
 - **Estatus en 4 etapas secuenciales** (cada una requiere la anterior):
   **Pagado → Enviado → En Casillero → En CR**. Al desmarcar una etapa se
   desmarcan las siguientes.
-- Totales: **Costo total**, **Ya en CR** y **En tránsito**.
+- Totales desglosados: **Costo total**, **Descuentos**, **Taxes total**,
+  **Gran total** (y su equivalente en **dólares**), **Ya en CR** y **En tránsito**.
 - Editar/eliminar en línea, ordenar por columna, contador y guardar en histórico.
 
 ### Pestaña — Histórico

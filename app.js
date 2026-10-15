@@ -103,6 +103,10 @@ function cargar() {
     estado.futuro.forEach((it) => {
       if (typeof it.url === "undefined") it.url = "";
     });
+    estado.ordenes.forEach((it) => {
+      if (typeof it.descuento === "undefined") it.descuento = 0;
+      if (typeof it.taxes === "undefined") it.taxes = 0;
+    });
   } catch (e) {
     console.warn("No se pudo leer el estado guardado:", e);
   }
@@ -145,7 +149,9 @@ function ordenarLista(tab) {
 
   return lista.sort((a, b) => {
     if (key === "total") {
-      return (totalLinea(a) - totalLinea(b)) * dir;
+      const ta = tab === "ordenes" ? totalOrdenCRC(a) : totalLinea(a);
+      const tb = tab === "ordenes" ? totalOrdenCRC(b) : totalLinea(b);
+      return (ta - tb) * dir;
     }
     if (key === "cant" || key === "precio" || key === "costo") {
       return ((Number(a[key]) || 0) - (Number(b[key]) || 0)) * dir;
@@ -528,7 +534,12 @@ function filaEdicionCompras(item) {
 // ================================================================
 //   TAB 4: ÓRDENES (compras por internet)
 // ================================================================
-// Costo de una orden convertido a colones
+// Total de una orden (costo - descuento + taxes) convertido a colones
+function totalOrdenCRC(item) {
+  const neto = (Number(item.costo) || 0) - (Number(item.descuento) || 0) + (Number(item.taxes) || 0);
+  return aColones(neto, item.moneda);
+}
+// Solo el costo (sin desc/taxes) en colones — se mantiene por compatibilidad
 function costoOrdenCRC(item) {
   return aColones(item.costo, item.moneda);
 }
@@ -545,6 +556,8 @@ function agregarOrdenes(e) {
     url: $("o-url").value.trim(),
     tracking: $("o-tracking").value.trim(),
     costo: parseFloat($("o-costo").value) || 0,
+    descuento: parseFloat($("o-descuento").value) || 0,
+    taxes: parseFloat($("o-taxes").value) || 0,
     moneda: $("o-moneda").value,
     pagado: false,
     enviado: false,
@@ -580,6 +593,9 @@ function renderOrdenes() {
         <td>${item.url ? `<a href="${escapeAttr(item.url)}" target="_blank" rel="noopener" class="link-url">🔗 Ver</a>` : "—"}</td>
         <td>${escapeHtml(item.tracking || "—")}</td>
         <td class="num">${simb}${formatNum(item.costo)}<span class="moneda-tag">${item.moneda}</span></td>
+        <td class="num">${item.descuento ? "-" + simb + formatNum(item.descuento) : "—"}</td>
+        <td class="num">${item.taxes ? simb + formatNum(item.taxes) : "—"}</td>
+        <td class="num">${fmtCRC(totalOrdenCRC(item))}</td>
         <td class="check-cell">
           <input type="checkbox" class="chk-estatus" data-campo="pagado" data-id="${item.id}" ${item.pagado ? "checked" : ""} title="Pagado" />
         </td>
@@ -612,13 +628,20 @@ function renderOrdenes() {
       `<strong>${nTotal - nEnCr}</strong> en tránsito`
     : "";
 
-  // Totales
-  const total = estado.ordenes.reduce((s, it) => s + costoOrdenCRC(it), 0);
-  const enCr = estado.ordenes.filter((it) => it.enCr).reduce((s, it) => s + costoOrdenCRC(it), 0);
-  $("totalOrdenes").textContent = fmtCRC(total);
-  $("totalOrdenesUSD").textContent = fmtUSD(aDolares(total));
+  // Totales (todo convertido a colones; descuentos y taxes incluidos)
+  const costoTotal = estado.ordenes.reduce((s, it) => s + aColones(it.costo, it.moneda), 0);
+  const descTotal = estado.ordenes.reduce((s, it) => s + aColones(it.descuento || 0, it.moneda), 0);
+  const taxesTotal = estado.ordenes.reduce((s, it) => s + aColones(it.taxes || 0, it.moneda), 0);
+  const granTotal = estado.ordenes.reduce((s, it) => s + totalOrdenCRC(it), 0);
+  const enCr = estado.ordenes.filter((it) => it.enCr).reduce((s, it) => s + totalOrdenCRC(it), 0);
+
+  $("costoOrdenes").textContent = fmtCRC(costoTotal);
+  $("descOrdenes").textContent = "-" + fmtCRC(descTotal);
+  $("taxesOrdenes").textContent = fmtCRC(taxesTotal);
+  $("totalOrdenes").textContent = fmtCRC(granTotal);
+  $("totalOrdenesUSD").textContent = fmtUSD(aDolares(granTotal));
   $("enCrOrdenes").textContent = fmtCRC(enCr);
-  $("transitoOrdenes").textContent = fmtCRC(total - enCr);
+  $("transitoOrdenes").textContent = fmtCRC(granTotal - enCr);
 }
 
 function filaEdicionOrdenes(item) {
@@ -629,7 +652,9 @@ function filaEdicionOrdenes(item) {
     <td><input type="url" class="ed ed-url" value="${escapeAttr(item.url || "")}" placeholder="https://…" /></td>
     <td><input type="text" class="ed ed-tracking" value="${escapeAttr(item.tracking || "")}" placeholder="Tracking" /></td>
     <td class="num"><input type="number" class="ed ed-costo" value="${item.costo}" min="0" step="any" /></td>
-    <td class="num" colspan="4">
+    <td class="num"><input type="number" class="ed ed-descuento" value="${item.descuento || 0}" min="0" step="any" /></td>
+    <td class="num"><input type="number" class="ed ed-taxes" value="${item.taxes || 0}" min="0" step="any" /></td>
+    <td class="num" colspan="5">
       <select class="ed ed-moneda">
         <option value="USD" ${item.moneda === "USD" ? "selected" : ""}>$ Dólares</option>
         <option value="CRC" ${item.moneda === "CRC" ? "selected" : ""}>₡ Colones</option>
@@ -687,6 +712,8 @@ function guardarEdicion(tab, id) {
     const urlOrdEl = tr.querySelector(".ed-url");
     if (urlOrdEl) item.url = urlOrdEl.value.trim();
     item.costo = parseFloat(tr.querySelector(".ed-costo").value) || 0;
+    item.descuento = parseFloat(tr.querySelector(".ed-descuento").value) || 0;
+    item.taxes = parseFloat(tr.querySelector(".ed-taxes").value) || 0;
     item.moneda = tr.querySelector(".ed-moneda").value;
     editando = { tab: null, id: null };
     guardar();
@@ -763,7 +790,7 @@ function guardarEnHistorico(tab) {
   if (nombre === null) return; // canceló
 
   const total = tab === "ordenes"
-    ? lista.reduce((s, it) => s + costoOrdenCRC(it), 0)
+    ? lista.reduce((s, it) => s + totalOrdenCRC(it), 0)
     : lista.reduce((s, it) => s + totalLinea(it), 0);
   estado.historico.unshift({
     id: uid(),
@@ -895,24 +922,30 @@ function totalHistLinea(item, tc) {
 function histTablaOrdenes(h) {
   const tc = h.tipoCambio;
   const si = (v) => (v ? "✓" : "—");
+  const enCol = (v, m) => (m === "USD" ? (Number(v) || 0) * (Number(tc) || 0) : (Number(v) || 0));
   return `
     <table class="hist-tabla">
       <thead>
         <tr>
           <th># Orden</th><th>Tienda</th><th>Ítem</th><th>Tracking</th>
-          <th class="num">Costo (₡)</th>
+          <th class="num">Costo</th><th class="num">Desc.</th><th class="num">Taxes</th>
+          <th class="num">Total (₡)</th>
           <th>Pag.</th><th>Env.</th><th>Casill.</th><th>En CR</th>
         </tr>
       </thead>
       <tbody>
         ${h.items.map((it) => {
-          const costoCrc = it.moneda === "USD" ? (Number(it.costo) || 0) * (Number(tc) || 0) : (Number(it.costo) || 0);
+          const neto = enCol((Number(it.costo) || 0) - (Number(it.descuento) || 0) + (Number(it.taxes) || 0), it.moneda);
+          const simb = it.moneda === "USD" ? "$" : "₡";
           return `<tr>
             <td>${escapeHtml(it.orden || "—")}</td>
             <td>${escapeHtml(it.tienda || "—")}</td>
             <td>${escapeHtml(it.item || "")}</td>
             <td>${escapeHtml(it.tracking || "—")}</td>
-            <td class="num">${fmtCRC(costoCrc)}</td>
+            <td class="num">${simb}${formatNum(it.costo)}</td>
+            <td class="num">${it.descuento ? "-" + simb + formatNum(it.descuento) : "—"}</td>
+            <td class="num">${it.taxes ? simb + formatNum(it.taxes) : "—"}</td>
+            <td class="num">${fmtCRC(neto)}</td>
             <td>${si(it.pagado)}</td>
             <td>${si(it.enviado)}</td>
             <td>${si(it.casillero)}</td>
