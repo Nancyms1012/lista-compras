@@ -143,6 +143,7 @@ body {
 .field-pasillo { flex: 1 1 110px; }
 .field-url { flex: 1 1 150px; }
 .field-fecha { flex: 0 1 140px; }
+.field-orden { flex: 0 1 110px; }
 .field-cant { flex: 0 1 85px; }
 .field-precio { flex: 1 1 110px; }
 .field-moneda { flex: 0 1 115px; }
@@ -212,6 +213,7 @@ th {
 }
 td.num, th.num { text-align: right; }
 .check-col, .acciones-col { text-align: center; width: 1%; white-space: nowrap; }
+.estatus-col { text-align: center; width: 1%; white-space: nowrap; font-size: 0.72rem; }
 td.check-cell { text-align: center; }
 td.check-cell input { width: 20px; height: 20px; cursor: pointer; }
 

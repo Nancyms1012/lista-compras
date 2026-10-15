@@ -24,6 +24,7 @@
     <button type="button" class="tab active" data-tab="actual">Compra actual</button>
     <button type="button" class="tab" data-tab="futuro">Compras a futuro</button>
     <button type="button" class="tab" data-tab="compras">Compras</button>
+    <button type="button" class="tab" data-tab="ordenes">Órdenes</button>
     <button type="button" class="tab" data-tab="historico">Histórico</button>
   </nav>
 
@@ -300,7 +301,82 @@
     </div>
   </section>
 
-  <!-- ==================== TAB 4: HISTÓRICO ==================== -->
+  <!-- ==================== TAB 4: ÓRDENES (compras por internet) ==================== -->
+  <section id="tab-ordenes" class="tab-panel">
+    <form id="formOrdenes" class="item-form">
+      <div class="field field-orden">
+        <label for="o-orden"># Orden</label>
+        <input type="text" id="o-orden" placeholder="Ej. 112-345" />
+      </div>
+      <div class="field field-lugar">
+        <label for="o-tienda">Tienda</label>
+        <input type="text" id="o-tienda" placeholder="Ej. Amazon (opcional)" />
+      </div>
+      <div class="field field-desc">
+        <label for="o-item">Ítem</label>
+        <input type="text" id="o-item" placeholder="Ej. Audífonos" required />
+      </div>
+      <div class="field field-url">
+        <label for="o-url">URL</label>
+        <input type="url" id="o-url" placeholder="https://… (opcional)" />
+      </div>
+      <div class="field field-lugar">
+        <label for="o-tracking">Tracking</label>
+        <input type="text" id="o-tracking" placeholder="N° rastreo (opcional)" />
+      </div>
+      <div class="field field-precio">
+        <label for="o-costo">Costo</label>
+        <input type="number" id="o-costo" min="0" step="any" placeholder="0" required />
+      </div>
+      <div class="field field-moneda">
+        <label for="o-moneda">Moneda</label>
+        <select id="o-moneda">
+          <option value="USD">$ Dólares</option>
+          <option value="CRC">₡ Colones</option>
+        </select>
+      </div>
+      <div class="field field-add">
+        <label>&nbsp;</label>
+        <button type="submit" class="btn-primary" id="o-submit">Agregar</button>
+      </div>
+    </form>
+
+    <div class="contador" id="contadorOrdenes"></div>
+
+    <div class="table-wrap">
+      <table id="tablaOrdenes" class="tabla-datos">
+        <thead>
+          <tr>
+            <th class="sortable" data-tab="ordenes" data-key="orden"># Orden</th>
+            <th class="sortable" data-tab="ordenes" data-key="tienda">Tienda</th>
+            <th class="sortable" data-tab="ordenes" data-key="item">Ítem</th>
+            <th>URL</th>
+            <th>Tracking</th>
+            <th class="sortable num" data-tab="ordenes" data-key="costo">Costo (₡)</th>
+            <th class="estatus-col">Pagado</th>
+            <th class="estatus-col">Enviado</th>
+            <th class="estatus-col">En Casillero</th>
+            <th class="estatus-col">En CR</th>
+            <th class="acciones-col">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="bodyOrdenes"></tbody>
+      </table>
+      <p id="vacioOrdenes" class="empty">No hay órdenes todavía. Agrega la primera arriba. 👆</p>
+    </div>
+
+    <div class="totales">
+      <div class="totales-row"><span>Costo total</span><strong id="totalOrdenes">₡0,00</strong></div>
+      <div class="totales-row comprado-row"><span>Ya en CR</span><strong id="enCrOrdenes">₡0,00</strong></div>
+      <div class="totales-row grand"><span>En tránsito</span><strong id="transitoOrdenes">₡0,00</strong></div>
+    </div>
+
+    <div class="acciones-lista">
+      <button type="button" class="btn-hist" data-tab="ordenes">📋 Guardar en histórico</button>
+    </div>
+  </section>
+
+  <!-- ==================== TAB 5: HISTÓRICO ==================== -->
   <section id="tab-historico" class="tab-panel">
     <p class="hist-intro">Aquí quedan guardadas las listas que has archivado. Puedes ver el detalle, volver a cargarlas o eliminarlas.</p>
     <div id="listaHistorico" class="hist-lista"></div>

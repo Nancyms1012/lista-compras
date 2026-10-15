@@ -23,7 +23,9 @@ let estado = {
   futuro: [],
   // compras: {id, fecha, desc, lugar, cant, precio, moneda}  (gastos reales)
   compras: [],
-  // historico: {id, fecha, nombre, tipo:"actual"|"futuro"|"compras", items:[...], total, tipoCambio}
+  // ordenes: {id, orden, tienda, item, url, tracking, costo, moneda, pagado, enviado, casillero, enCr}
+  ordenes: [],
+  // historico: {id, fecha, nombre, tipo:"actual"|"futuro"|"compras"|"ordenes", items:[...], total, tipoCambio}
   historico: [],
 };
 
@@ -32,6 +34,7 @@ const orden = {
   actual: { key: null, dir: 1 },
   futuro: { key: null, dir: 1 },
   compras: { key: null, dir: 1 },
+  ordenes: { key: null, dir: 1 },
 };
 
 // Fila en edición inline (una a la vez, por pestaña)
@@ -77,6 +80,7 @@ function cargar() {
     estado.actual = Array.isArray(data.actual) ? data.actual : [];
     estado.futuro = Array.isArray(data.futuro) ? data.futuro : [];
     estado.compras = Array.isArray(data.compras) ? data.compras : [];
+    estado.ordenes = Array.isArray(data.ordenes) ? data.ordenes : [];
     estado.historico = Array.isArray(data.historico) ? data.historico : [];
     // Migración: artículos viejos de "actual" sin campo "incluir" se asumen incluidos
     estado.actual.forEach((it) => {
@@ -131,7 +135,7 @@ function ordenarLista(tab) {
     if (key === "total") {
       return (totalLinea(a) - totalLinea(b)) * dir;
     }
-    if (key === "cant" || key === "precio") {
+    if (key === "cant" || key === "precio" || key === "costo") {
       return ((Number(a[key]) || 0) - (Number(b[key]) || 0)) * dir;
     }
     if (key === "pasillo") {
@@ -510,6 +514,139 @@ function filaEdicionCompras(item) {
 }
 
 // ================================================================
+//   TAB 4: ÓRDENES (compras por internet)
+// ================================================================
+// Costo de una orden convertido a colones
+function costoOrdenCRC(item) {
+  return aColones(item.costo, item.moneda);
+}
+
+function agregarOrdenes(e) {
+  e.preventDefault();
+  const itemTxt = $("o-item").value.trim();
+  if (!itemTxt) return;
+  estado.ordenes.push({
+    id: uid(),
+    orden: $("o-orden").value.trim(),
+    tienda: $("o-tienda").value.trim(),
+    item: itemTxt,
+    url: $("o-url").value.trim(),
+    tracking: $("o-tracking").value.trim(),
+    costo: parseFloat($("o-costo").value) || 0,
+    moneda: $("o-moneda").value,
+    pagado: false,
+    enviado: false,
+    casillero: false,
+    enCr: false,
+  });
+  $("formOrdenes").reset();
+  $("o-item").focus();
+  guardar();
+  render();
+}
+
+function renderOrdenes() {
+  const body = $("bodyOrdenes");
+  body.innerHTML = "";
+  const lista = ordenarLista("ordenes");
+
+  lista.forEach((item) => {
+    const tr = document.createElement("tr");
+    tr.dataset.id = item.id;
+
+    if (editando.tab === "ordenes" && editando.id === item.id) {
+      tr.classList.add("editando");
+      tr.innerHTML = filaEdicionOrdenes(item);
+    } else {
+      if (item.enCr) tr.classList.add("comprado");
+      const simb = item.moneda === "USD" ? "$" : "₡";
+      // Las casillas secuenciales: cada una se habilita solo si la anterior está marcada
+      tr.innerHTML = `
+        <td>${escapeHtml(item.orden || "—")}</td>
+        <td>${escapeHtml(item.tienda || "—")}</td>
+        <td>${escapeHtml(item.item)}</td>
+        <td>${item.url ? `<a href="${escapeAttr(item.url)}" target="_blank" rel="noopener" class="link-url">🔗 Ver</a>` : "—"}</td>
+        <td>${escapeHtml(item.tracking || "—")}</td>
+        <td class="num">${simb}${formatNum(item.costo)}<span class="moneda-tag">${item.moneda}</span></td>
+        <td class="check-cell">
+          <input type="checkbox" class="chk-estatus" data-campo="pagado" data-id="${item.id}" ${item.pagado ? "checked" : ""} title="Pagado" />
+        </td>
+        <td class="check-cell">
+          <input type="checkbox" class="chk-estatus" data-campo="enviado" data-id="${item.id}" ${item.enviado ? "checked" : ""} ${item.pagado ? "" : "disabled"} title="Enviado" />
+        </td>
+        <td class="check-cell">
+          <input type="checkbox" class="chk-estatus" data-campo="casillero" data-id="${item.id}" ${item.casillero ? "checked" : ""} ${item.enviado ? "" : "disabled"} title="En Casillero" />
+        </td>
+        <td class="check-cell">
+          <input type="checkbox" class="chk-estatus" data-campo="enCr" data-id="${item.id}" ${item.enCr ? "checked" : ""} ${item.casillero ? "" : "disabled"} title="En CR" />
+        </td>
+        <td class="acciones-col">
+          <button class="btn-icon btn-edit" data-tab="ordenes" data-id="${item.id}" title="Editar">✏️</button>
+          <button class="btn-icon btn-del" data-tab="ordenes" data-id="${item.id}" title="Eliminar">🗑️</button>
+        </td>`;
+    }
+    body.appendChild(tr);
+  });
+
+  $("vacioOrdenes").style.display = estado.ordenes.length ? "none" : "block";
+  actualizarFlechasOrden("ordenes");
+
+  // Contador
+  const nTotal = estado.ordenes.length;
+  const nEnCr = estado.ordenes.filter((it) => it.enCr).length;
+  $("contadorOrdenes").innerHTML = nTotal
+    ? `<strong>${nTotal}</strong> orden${nTotal === 1 ? "" : "es"} · ` +
+      `<strong>${nEnCr}</strong> en CR · ` +
+      `<strong>${nTotal - nEnCr}</strong> en tránsito`
+    : "";
+
+  // Totales
+  const total = estado.ordenes.reduce((s, it) => s + costoOrdenCRC(it), 0);
+  const enCr = estado.ordenes.filter((it) => it.enCr).reduce((s, it) => s + costoOrdenCRC(it), 0);
+  $("totalOrdenes").textContent = fmtCRC(total);
+  $("enCrOrdenes").textContent = fmtCRC(enCr);
+  $("transitoOrdenes").textContent = fmtCRC(total - enCr);
+}
+
+function filaEdicionOrdenes(item) {
+  return `
+    <td><input type="text" class="ed ed-orden" value="${escapeAttr(item.orden || "")}" placeholder="# Orden" /></td>
+    <td><input type="text" class="ed ed-tienda" value="${escapeAttr(item.tienda || "")}" placeholder="Tienda" /></td>
+    <td><input type="text" class="ed ed-item" value="${escapeAttr(item.item)}" /></td>
+    <td><input type="url" class="ed ed-url" value="${escapeAttr(item.url || "")}" placeholder="https://…" /></td>
+    <td><input type="text" class="ed ed-tracking" value="${escapeAttr(item.tracking || "")}" placeholder="Tracking" /></td>
+    <td class="num"><input type="number" class="ed ed-costo" value="${item.costo}" min="0" step="any" /></td>
+    <td class="num" colspan="4">
+      <select class="ed ed-moneda">
+        <option value="USD" ${item.moneda === "USD" ? "selected" : ""}>$ Dólares</option>
+        <option value="CRC" ${item.moneda === "CRC" ? "selected" : ""}>₡ Colones</option>
+      </select>
+    </td>
+    <td class="acciones-col">
+      <button class="btn-icon btn-save" data-tab="ordenes" data-id="${item.id}" title="Guardar">✅</button>
+      <button class="btn-icon btn-cancel" title="Cancelar">✖️</button>
+    </td>`;
+}
+
+// Aplica la regla secuencial de estatus: marcar una exige las anteriores;
+// desmarcar una quita las siguientes.
+function cambiarEstatusOrden(id, campo, valor) {
+  const item = estado.ordenes.find((it) => it.id === id);
+  if (!item) return;
+  const etapas = ["pagado", "enviado", "casillero", "enCr"];
+  const idx = etapas.indexOf(campo);
+  if (valor) {
+    // Marcar esta y todas las anteriores
+    for (let i = 0; i <= idx; i++) item[etapas[i]] = true;
+  } else {
+    // Desmarcar esta y todas las siguientes
+    for (let i = idx; i < etapas.length; i++) item[etapas[i]] = false;
+  }
+  guardar();
+  renderOrdenes();
+}
+
+// ================================================================
 //   Edición en línea
 // ================================================================
 function iniciarEdicion(tab, id) {
@@ -527,6 +664,22 @@ function guardarEdicion(tab, id) {
   if (!item) return;
   const tr = document.querySelector(`#body${cap(tab)} tr[data-id="${id}"]`);
   if (!tr) return;
+
+  // Órdenes tiene campos distintos (item/costo/orden/tienda/tracking)
+  if (tab === "ordenes") {
+    item.item = tr.querySelector(".ed-item").value.trim() || item.item;
+    item.orden = tr.querySelector(".ed-orden").value.trim();
+    item.tienda = tr.querySelector(".ed-tienda").value.trim();
+    item.tracking = tr.querySelector(".ed-tracking").value.trim();
+    const urlOrdEl = tr.querySelector(".ed-url");
+    if (urlOrdEl) item.url = urlOrdEl.value.trim();
+    item.costo = parseFloat(tr.querySelector(".ed-costo").value) || 0;
+    item.moneda = tr.querySelector(".ed-moneda").value;
+    editando = { tab: null, id: null };
+    guardar();
+    render();
+    return;
+  }
 
   item.desc = tr.querySelector(".ed-desc").value.trim() || item.desc;
   const pasilloEl = tr.querySelector(".ed-pasillo");
@@ -589,14 +742,16 @@ function guardarEnHistorico(tab) {
     alert("La lista está vacía, no hay nada que guardar.");
     return;
   }
-  const nombreTab = { actual: "Compra", futuro: "Compras a futuro", compras: "Compras" };
+  const nombreTab = { actual: "Compra", futuro: "Compras a futuro", compras: "Compras", ordenes: "Órdenes" };
   const nombreDef =
     (nombreTab[tab] || "Lista") +
     " " + new Date().toLocaleDateString("es-CR");
   const nombre = prompt("Nombre para esta lista en el histórico:", nombreDef);
   if (nombre === null) return; // canceló
 
-  const total = lista.reduce((s, it) => s + totalLinea(it), 0);
+  const total = tab === "ordenes"
+    ? lista.reduce((s, it) => s + costoOrdenCRC(it), 0)
+    : lista.reduce((s, it) => s + totalLinea(it), 0);
   estado.historico.unshift({
     id: uid(),
     fecha: new Date().toISOString(),
@@ -622,7 +777,7 @@ function eliminarHistorico(id) {
 function cargarDesdeHistorico(id) {
   const h = estado.historico.find((x) => x.id === id);
   if (!h) return;
-  const nombreTab = { actual: "Compra actual", futuro: "Compras a futuro", compras: "Compras" };
+  const nombreTab = { actual: "Compra actual", futuro: "Compras a futuro", compras: "Compras", ordenes: "Órdenes" };
   const destino = nombreTab[h.tipo] || h.tipo;
   if (!confirm(
     `Esto reemplazará tu lista de "${destino}" con la copia guardada "${h.nombre}".\n` +
@@ -660,7 +815,7 @@ function renderHistorico() {
     const fecha = new Date(h.fecha).toLocaleString("es-CR", {
       dateStyle: "medium", timeStyle: "short",
     });
-    const nombreTab = { actual: "Compra actual", futuro: "Compras a futuro", compras: "Compras" };
+    const nombreTab = { actual: "Compra actual", futuro: "Compras a futuro", compras: "Compras", ordenes: "Órdenes" };
     const tipoTxt = nombreTab[h.tipo] || h.tipo;
     const nItems = h.items.length;
 
@@ -675,6 +830,7 @@ function renderHistorico() {
         <div class="hist-total">${fmtCRC(h.total)}</div>
       </div>
       <div class="hist-detalle">
+        ${h.tipo === "ordenes" ? histTablaOrdenes(h) : `
         <table class="hist-tabla">
           <thead>
             <tr>
@@ -702,7 +858,7 @@ function renderHistorico() {
               </tr>`;
             }).join("")}
           </tbody>
-        </table>
+        </table>`}
       </div>
       <div class="hist-acciones">
         <button class="btn-mini btn-hist-toggle">Ver detalle</button>
@@ -720,6 +876,38 @@ function totalHistLinea(item, tc) {
   const p = Number(item.precio) || 0;
   const enCol = item.moneda === "USD" ? p * (Number(tc) || 0) : p;
   return enCol * (Number(item.cant) || 0);
+}
+
+// Tabla de detalle del histórico para una entrada tipo "ordenes"
+function histTablaOrdenes(h) {
+  const tc = h.tipoCambio;
+  const si = (v) => (v ? "✓" : "—");
+  return `
+    <table class="hist-tabla">
+      <thead>
+        <tr>
+          <th># Orden</th><th>Tienda</th><th>Ítem</th><th>Tracking</th>
+          <th class="num">Costo (₡)</th>
+          <th>Pag.</th><th>Env.</th><th>Casill.</th><th>En CR</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${h.items.map((it) => {
+          const costoCrc = it.moneda === "USD" ? (Number(it.costo) || 0) * (Number(tc) || 0) : (Number(it.costo) || 0);
+          return `<tr>
+            <td>${escapeHtml(it.orden || "—")}</td>
+            <td>${escapeHtml(it.tienda || "—")}</td>
+            <td>${escapeHtml(it.item || "")}</td>
+            <td>${escapeHtml(it.tracking || "—")}</td>
+            <td class="num">${fmtCRC(costoCrc)}</td>
+            <td>${si(it.pagado)}</td>
+            <td>${si(it.enviado)}</td>
+            <td>${si(it.casillero)}</td>
+            <td>${si(it.enCr)}</td>
+          </tr>`;
+        }).join("")}
+      </tbody>
+    </table>`;
 }
 
 // ================================================================
@@ -818,7 +1006,8 @@ function importarRespaldo(archivo) {
     // Validación mínima: debe tener al menos una de las listas esperadas
     const pareceValido =
       data && (Array.isArray(data.actual) || Array.isArray(data.futuro) ||
-               Array.isArray(data.compras) || Array.isArray(data.historico));
+               Array.isArray(data.compras) || Array.isArray(data.ordenes) ||
+               Array.isArray(data.historico));
     if (!pareceValido) {
       alert("El archivo no parece un respaldo de Lista de Compras.");
       return;
@@ -839,12 +1028,14 @@ function importarRespaldo(archivo) {
       actual: [],
       futuro: [],
       compras: [],
+      ordenes: [],
       historico: [],
       ...data,
     };
     estado.actual = Array.isArray(data.actual) ? data.actual : [];
     estado.futuro = Array.isArray(data.futuro) ? data.futuro : [];
     estado.compras = Array.isArray(data.compras) ? data.compras : [];
+    estado.ordenes = Array.isArray(data.ordenes) ? data.ordenes : [];
     estado.historico = Array.isArray(data.historico) ? data.historico : [];
     // Asegura campos nuevos en artículos viejos
     estado.actual.forEach((it) => {
@@ -876,6 +1067,7 @@ function render() {
   renderActual();
   renderFuturo();
   renderCompras();
+  renderOrdenes();
   renderHistorico();
 }
 
@@ -897,6 +1089,7 @@ function initEventos() {
   $("formActual").addEventListener("submit", agregarActual);
   $("formFuturo").addEventListener("submit", agregarFuturo);
   $("formCompras").addEventListener("submit", agregarCompras);
+  $("formOrdenes").addEventListener("submit", agregarOrdenes);
 
   // Descuento
   $("aplicarDescuento").addEventListener("change", (e) => {
@@ -978,6 +1171,7 @@ function initEventos() {
       if (tab === "actual") renderActual();
       else if (tab === "futuro") renderFuturo();
       else if (tab === "compras") renderCompras();
+      else if (tab === "ordenes") renderOrdenes();
     });
   });
 
@@ -1034,6 +1228,10 @@ function initEventos() {
         guardar();
         renderActual();
       }
+    }
+    // Órdenes: estatus secuencial (pagado/enviado/casillero/enCr)
+    if (e.target.classList.contains("chk-estatus") && !e.target.disabled) {
+      cambiarEstatusOrden(e.target.dataset.id, e.target.dataset.campo, e.target.checked);
     }
   });
 
