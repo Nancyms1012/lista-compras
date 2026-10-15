@@ -378,8 +378,32 @@
 
     <div class="totales">
       <div class="totales-row"><span>Costo total</span><strong id="costoOrdenes">₡0,00</strong></div>
-      <div class="totales-row descuento-row"><span>Descuentos</span><strong id="descOrdenes">-₡0,00</strong></div>
-      <div class="totales-row"><span>Taxes total</span><strong id="taxesOrdenes">₡0,00</strong></div>
+      <div class="totales-row descuento-row"><span>Descuentos por orden</span><strong id="descOrdenes">-₡0,00</strong></div>
+      <div class="totales-row"><span>Taxes por orden</span><strong id="taxesOrdenes">₡0,00</strong></div>
+
+      <div class="totales-sep"></div>
+
+      <div class="totales-row gen-row">
+        <label for="ordDescuento">Descuento general</label>
+        <div class="gen-input">
+          <input type="number" id="ordDescuento" min="0" step="any" placeholder="0" />
+          <select id="ordDescuentoMoneda">
+            <option value="USD">$</option>
+            <option value="CRC">₡</option>
+          </select>
+        </div>
+      </div>
+      <div class="totales-row gen-row">
+        <label for="ordTaxes">Taxes general</label>
+        <div class="gen-input">
+          <input type="number" id="ordTaxes" min="0" step="any" placeholder="0" />
+          <select id="ordTaxesMoneda">
+            <option value="USD">$</option>
+            <option value="CRC">₡</option>
+          </select>
+        </div>
+      </div>
+
       <div class="totales-row grand"><span>Gran total</span><strong id="totalOrdenes">₡0,00</strong></div>
       <div class="totales-row dolar-row"><span>Gran total en dólares</span><strong id="totalOrdenesUSD">$0.00</strong></div>
 

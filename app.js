@@ -17,6 +17,11 @@ let estado = {
   presupuestoActual: 0,   // ₡ disponibles para la compra actual
   presupuestoFuturo: 0,   // ₡ disponibles para compras a futuro
   presupuestoCompras: 0,  // ₡ disponibles para compras (gastos reales)
+  // Descuento y taxes GENERALES para el tab Órdenes (además de los por orden)
+  ordDescuento: 0,
+  ordDescuentoMoneda: "USD",
+  ordTaxes: 0,
+  ordTaxesMoneda: "USD",
   // actual: {id, desc, pasillo, cant, precio, moneda, incluir, comprado}
   actual: [],
   // futuro: {id, desc, lugar, url, cant, precio, moneda, comprado}
@@ -628,11 +633,18 @@ function renderOrdenes() {
       `<strong>${nTotal - nEnCr}</strong> en tránsito`
     : "";
 
-  // Totales (todo convertido a colones; descuentos y taxes incluidos)
+  // Totales (todo convertido a colones; descuentos y taxes por orden incluidos)
   const costoTotal = estado.ordenes.reduce((s, it) => s + aColones(it.costo, it.moneda), 0);
   const descTotal = estado.ordenes.reduce((s, it) => s + aColones(it.descuento || 0, it.moneda), 0);
   const taxesTotal = estado.ordenes.reduce((s, it) => s + aColones(it.taxes || 0, it.moneda), 0);
-  const granTotal = estado.ordenes.reduce((s, it) => s + totalOrdenCRC(it), 0);
+  const subtotalOrdenes = estado.ordenes.reduce((s, it) => s + totalOrdenCRC(it), 0);
+
+  // Descuento y taxes GENERALES (convertidos a colones según su propia moneda)
+  const descGenCRC = aColones(estado.ordDescuento || 0, estado.ordDescuentoMoneda);
+  const taxesGenCRC = aColones(estado.ordTaxes || 0, estado.ordTaxesMoneda);
+
+  const granTotal = subtotalOrdenes - descGenCRC + taxesGenCRC;
+  // Para "en CR" y "en tránsito" se usa el total por orden (sin el ajuste general)
   const enCr = estado.ordenes.filter((it) => it.enCr).reduce((s, it) => s + totalOrdenCRC(it), 0);
 
   $("costoOrdenes").textContent = fmtCRC(costoTotal);
@@ -641,7 +653,7 @@ function renderOrdenes() {
   $("totalOrdenes").textContent = fmtCRC(granTotal);
   $("totalOrdenesUSD").textContent = fmtUSD(aDolares(granTotal));
   $("enCrOrdenes").textContent = fmtCRC(enCr);
-  $("transitoOrdenes").textContent = fmtCRC(granTotal - enCr);
+  $("transitoOrdenes").textContent = fmtCRC(subtotalOrdenes - enCr);
 }
 
 function filaEdicionOrdenes(item) {
@@ -1071,6 +1083,10 @@ function importarRespaldo(archivo) {
       presupuestoActual: 0,
       presupuestoFuturo: 0,
       presupuestoCompras: 0,
+      ordDescuento: 0,
+      ordDescuentoMoneda: "USD",
+      ordTaxes: 0,
+      ordTaxesMoneda: "USD",
       actual: [],
       futuro: [],
       compras: [],
@@ -1100,6 +1116,10 @@ function importarRespaldo(archivo) {
     $("presupuestoActual").value = estado.presupuestoActual || "";
     $("presupuestoFuturo").value = estado.presupuestoFuturo || "";
     $("presupuestoCompras").value = estado.presupuestoCompras || "";
+    $("ordDescuento").value = estado.ordDescuento || "";
+    $("ordTaxes").value = estado.ordTaxes || "";
+    $("ordDescuentoMoneda").value = estado.ordDescuentoMoneda || "USD";
+    $("ordTaxesMoneda").value = estado.ordTaxesMoneda || "USD";
     render();
     alert("✓ Respaldo importado correctamente.");
   };
@@ -1167,6 +1187,28 @@ function initEventos() {
     estado.presupuestoCompras = parseFloat(e.target.value) || 0;
     guardar();
     renderCompras();
+  });
+
+  // Descuento y taxes generales del tab Órdenes
+  $("ordDescuento").addEventListener("input", (e) => {
+    estado.ordDescuento = parseFloat(e.target.value) || 0;
+    guardar();
+    renderOrdenes();
+  });
+  $("ordDescuentoMoneda").addEventListener("change", (e) => {
+    estado.ordDescuentoMoneda = e.target.value;
+    guardar();
+    renderOrdenes();
+  });
+  $("ordTaxes").addEventListener("input", (e) => {
+    estado.ordTaxes = parseFloat(e.target.value) || 0;
+    guardar();
+    renderOrdenes();
+  });
+  $("ordTaxesMoneda").addEventListener("change", (e) => {
+    estado.ordTaxesMoneda = e.target.value;
+    guardar();
+    renderOrdenes();
   });
 
   // Guardar manual
@@ -1305,6 +1347,10 @@ function init() {
   if (estado.presupuestoActual) $("presupuestoActual").value = estado.presupuestoActual;
   if (estado.presupuestoFuturo) $("presupuestoFuturo").value = estado.presupuestoFuturo;
   if (estado.presupuestoCompras) $("presupuestoCompras").value = estado.presupuestoCompras;
+  if (estado.ordDescuento) $("ordDescuento").value = estado.ordDescuento;
+  if (estado.ordTaxes) $("ordTaxes").value = estado.ordTaxes;
+  $("ordDescuentoMoneda").value = estado.ordDescuentoMoneda || "USD";
+  $("ordTaxesMoneda").value = estado.ordTaxesMoneda || "USD";
   $("c-fecha").value = hoyISO(); // fecha de hoy por defecto en Compras
   initEventos();
   render();

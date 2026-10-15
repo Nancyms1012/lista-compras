@@ -323,6 +323,25 @@ tr.comprado td.acciones-col { text-decoration: none; }
 .comprado-row strong { color: var(--verde); }
 .dolar-row { color: #777; font-size: 0.92rem; }
 .dolar-row strong { color: #555; }
+
+/* Campos generales de descuento/taxes (tab Órdenes) */
+.gen-row label { font-size: 0.95rem; color: var(--texto); }
+.gen-input { display: flex; gap: 6px; align-items: center; }
+.gen-input input {
+  width: 110px;
+  padding: 7px 9px;
+  border: 1px solid var(--gris-borde);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  text-align: right;
+}
+.gen-input select {
+  padding: 7px 8px;
+  border: 1px solid var(--gris-borde);
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+.gen-input input:focus, .gen-input select:focus { outline: none; border-color: var(--azul); }
 .check-inline {
   display: flex;
   align-items: center;

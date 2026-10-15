@@ -35,8 +35,13 @@ HTML + CSS + JavaScript puro. Todo se guarda en el navegador (`localStorage`).
 - **Estatus en 4 etapas secuenciales** (cada una requiere la anterior):
   **Pagado → Enviado → En Casillero → En CR**. Al desmarcar una etapa se
   desmarcan las siguientes.
-- Totales desglosados: **Costo total**, **Descuentos**, **Taxes total**,
-  **Gran total** (y su equivalente en **dólares**), **Ya en CR** y **En tránsito**.
+- Además de los descuentos/taxes por orden, hay un **Descuento general** y un
+  **Taxes general** (un monto único para toda la lista), cada uno con su propia
+  moneda ₡/$. Se aplican sobre el total: Gran total = (suma de órdenes)
+  − Descuento general + Taxes general.
+- Totales desglosados: **Costo total**, **Descuentos por orden**,
+  **Taxes por orden**, **Descuento/Taxes general**, **Gran total**
+  (y su equivalente en **dólares**), **Ya en CR** y **En tránsito**.
 - Editar/eliminar en línea, ordenar por columna, contador y guardar en histórico.
 
 ### Pestaña — Histórico
